@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="script.cpp" />
+    <ClCompile Include="keyboard.cpp" />
+    <ClCompile Include="Cheats.cpp" />
+    <ClCompile Include="CharacterCreator.cpp" />
+    <ClCompile Include="RpEvents.cpp" />
+    <ClCompile Include="RankBar.cpp" />
+    <ClCompile Include="input.cpp" />
+    <ClCompile Include="Money.cpp" />
+    <ClCompile Include="Misc.cpp" />
+    <ClCompile Include="Self.cpp" />
+    <ClCompile Include="Weapons.cpp" />
+    <ClCompile Include="Vehicle.cpp" />
+    <ClCompile Include="CarShop.cpp" />
+    <ClCompile Include="Garage.cpp" />
+    <ClCompile Include="GunStore.cpp" />
+    <ClCompile Include="Credits.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="script.h" />
+    <ClInclude Include="..\..\inc\types.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\inc\enums.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\inc\natives.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="keyboard.h" />
+    <ClInclude Include="..\..\inc\main.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="Cheats.h" />
+    <ClInclude Include="RpEvents.h" />
+    <ClInclude Include="CharacterCreator.h" />
+    <ClInclude Include="RankBar.h" />
+    <ClInclude Include="input.h" />
+    <ClInclude Include="Money.h" />
+    <ClInclude Include="Misc.h" />
+    <ClInclude Include="Self.h" />
+    <ClInclude Include="Weapons.h" />
+    <ClInclude Include="Vehicle.h" />
+    <ClInclude Include="CarShop.h" />
+    <ClInclude Include="Garage.h" />
+    <ClInclude Include="GunStore.h" />
+    <ClInclude Include="Credits.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="include">
+      <UniqueIdentifier>{fe82bd4a-2d14-486a-8be5-8bf6b50a2414}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

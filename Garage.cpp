@@ -1,0 +1,179 @@
+#include "Garage.h"
+#include "input.h"
+#include "script.h" 
+#include <vector>
+#include <fstream>
+#include <string>
+
+// --- Global Variables ---
+static std::vector<OwnedVehicle> g_ownedVehicles;
+static int garageMenuIndex = 0;
+
+// --- Helper Functions ---
+void spawn_vehicle(Hash vehicleHash) {
+    if (!STREAMING::IS_MODEL_IN_CDIMAGE(vehicleHash) || !STREAMING::IS_MODEL_A_VEHICLE(vehicleHash)) {
+        return;
+    }
+
+    STREAMING::REQUEST_MODEL(vehicleHash);
+    while (!STREAMING::HAS_MODEL_LOADED(vehicleHash)) {
+        WAIT(0);
+    }
+
+    Ped playerPed = PLAYER::PLAYER_PED_ID();
+    Vector3 coords = ENTITY::GET_ENTITY_COORDS(playerPed, true);
+    float heading = ENTITY::GET_ENTITY_HEADING(playerPed);
+
+    Vector3 spawnCoords;
+    if (PATHFIND::GET_SAFE_COORD_FOR_PED(coords.x + 5.0f, coords.y + 5.0f, coords.z, true, &spawnCoords, 16)) {
+        Vehicle veh = VEHICLE::CREATE_VEHICLE(vehicleHash, spawnCoords.x, spawnCoords.y, spawnCoords.z, heading, true, true);
+
+        Blip blip = UI::ADD_BLIP_FOR_ENTITY(veh);
+        UI::SET_BLIP_SPRITE(blip, 225);
+        UI::SET_BLIP_COLOUR(blip, 2);
+        UI::BEGIN_TEXT_COMMAND_SET_BLIP_NAME("STRING");
+        UI::_ADD_TEXT_COMPONENT_STRING("Personal Vehicle");
+        UI::END_TEXT_COMMAND_SET_BLIP_NAME(blip);
+
+        PED::SET_PED_INTO_VEHICLE(playerPed, veh, -1);
+        VEHICLE::SET_VEHICLE_IS_STOLEN(veh, false);
+
+        bool found = false;
+        for (size_t i = 0; i < g_ownedVehicles.size(); ++i) {
+            if (g_ownedVehicles[i].hash == vehicleHash) {
+                g_ownedVehicles[i].vehicle_handle = veh;
+                g_ownedVehicles[i].blip = blip;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            g_ownedVehicles.push_back({ vehicleHash, blip, veh });
+        }
+    }
+
+    STREAMING::SET_MODEL_AS_NO_LONGER_NEEDED(vehicleHash);
+}
+
+// --- Garage System ---
+void Garage_Init() {
+    Garage_Load();
+}
+
+void Garage_Tick() {
+    for (size_t i = 0; i < g_ownedVehicles.size(); ++i) {
+        if (g_ownedVehicles[i].blip != 0 && !ENTITY::DOES_ENTITY_EXIST(g_ownedVehicles[i].vehicle_handle)) {
+            UI::REMOVE_BLIP(&g_ownedVehicles[i].blip);
+            g_ownedVehicles[i].blip = 0;
+            g_ownedVehicles[i].vehicle_handle = 0; // Clear the handle
+        }
+    }
+}
+
+bool Garage_HasVehicle(Hash vehicleHash) {
+    for (size_t i = 0; i < g_ownedVehicles.size(); ++i) {
+        if (g_ownedVehicles[i].hash == vehicleHash) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// NEW: Function to check ownership by handle
+bool Garage_IsVehicleOwned(Vehicle vehicle) {
+    if (!ENTITY::DOES_ENTITY_EXIST(vehicle)) return false;
+    for (const auto& ownedVeh : g_ownedVehicles) {
+        if (ownedVeh.vehicle_handle == vehicle) {
+            return true;
+        }
+    }
+    return false;
+}
+
+
+void Garage_AddVehicle(Hash vehicleHash) {
+    if (Garage_HasVehicle(vehicleHash)) {
+        return;
+    }
+    OwnedVehicle newVeh = { vehicleHash, 0, 0 };
+    g_ownedVehicles.push_back(newVeh);
+    Garage_Save();
+}
+
+void Garage_Save() {
+    std::ofstream file("GTAOfflineGarage.ini");
+    if (file.is_open()) {
+        for (size_t i = 0; i < g_ownedVehicles.size(); ++i) {
+            file << g_ownedVehicles[i].hash << std::endl;
+        }
+        file.close();
+    }
+}
+
+void Garage_Load() {
+    g_ownedVehicles.clear();
+    std::ifstream file("GTAOfflineGarage.ini");
+    if (file.is_open()) {
+        Hash hash;
+        while (file >> hash) {
+            OwnedVehicle ownedVeh = { hash, 0, 0 };
+            g_ownedVehicles.push_back(ownedVeh);
+        }
+        file.close();
+    }
+}
+
+void draw_garage_menu() {
+    extern int menuCategory;
+    extern int menuIndex;
+    extern int inputDelayFrames;
+
+    const float MENU_X = 0.02f;
+    const float MENU_Y = 0.13f;
+    const float MENU_W = 0.29f;
+    const float MENU_H = 0.038f;
+
+    const int numOptions = g_ownedVehicles.size() + 1;
+
+    GRAPHICS::DRAW_RECT(MENU_X + MENU_W * 0.5f, MENU_Y - 0.038f + MENU_H * (numOptions / 2.0f), MENU_W, MENU_H * numOptions, 14, 17, 22, 228);
+    UI::SET_TEXT_FONT(0);
+    UI::SET_TEXT_SCALE(0.0f, 0.43f);
+    UI::SET_TEXT_COLOUR(255, 255, 220, 252);
+    UI::_SET_TEXT_ENTRY("STRING");
+    UI::_ADD_TEXT_COMPONENT_STRING("Garage");
+    UI::_DRAW_TEXT(MENU_X + 0.014f, MENU_Y - 0.062f);
+
+    for (size_t i = 0; i < g_ownedVehicles.size(); ++i) {
+        float cy = MENU_Y + MENU_H * i;
+        bool active = (i == garageMenuIndex);
+        GRAPHICS::DRAW_RECT(MENU_X + MENU_W * 0.5f, cy + (MENU_H - 0.004f) * 0.5f, MENU_W, MENU_H - 0.004f, active ? 190 : 60, active ? 130 : 80, active ? 215 : 80, active ? 255 : 135);
+        UI::SET_TEXT_FONT(0);
+        UI::SET_TEXT_SCALE(0.0f, 0.38f);
+        UI::SET_TEXT_COLOUR(0, 0, 0, 255);
+        UI::_SET_TEXT_ENTRY("STRING");
+        UI::_ADD_TEXT_COMPONENT_STRING(const_cast<char*>(UI::_GET_LABEL_TEXT(VEHICLE::GET_DISPLAY_NAME_FROM_VEHICLE_MODEL(g_ownedVehicles[i].hash))));
+        UI::_DRAW_TEXT(MENU_X + 0.017f, cy + 0.007f);
+    }
+
+    float back_cy = MENU_Y + MENU_H * g_ownedVehicles.size();
+    bool back_active = (g_ownedVehicles.size() == garageMenuIndex);
+    GRAPHICS::DRAW_RECT(MENU_X + MENU_W * 0.5f, back_cy + (MENU_H - 0.004f) * 0.5f, MENU_W, MENU_H - 0.004f, back_active ? 215 : 80, back_active ? 60 : 80, back_active ? 60 : 80, 255);
+    UI::SET_TEXT_FONT(0);
+    UI::SET_TEXT_SCALE(0.0f, 0.38f);
+    UI::SET_TEXT_COLOUR(0, 0, 0, 255);
+    UI::_SET_TEXT_ENTRY("STRING");
+    UI::_ADD_TEXT_COMPONENT_STRING("Back");
+    UI::_DRAW_TEXT(MENU_X + 0.017f, back_cy + 0.007f);
+
+    if (IsKeyJustUp(VK_NUMPAD8) || PadPressed(DPAD_UP)) garageMenuIndex = (garageMenuIndex - 1 + numOptions) % numOptions;
+    if (IsKeyJustUp(VK_NUMPAD2) || PadPressed(DPAD_DOWN)) garageMenuIndex = (garageMenuIndex + 1) % numOptions;
+    if (IsKeyJustUp(VK_NUMPAD5) || PadPressed(BTN_A)) {
+        if (garageMenuIndex == g_ownedVehicles.size()) {
+            menuCategory = 0;
+            menuIndex = 5;
+        }
+        else {
+            spawn_vehicle(g_ownedVehicles[garageMenuIndex].hash);
+        }
+    }
+}
