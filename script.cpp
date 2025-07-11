@@ -37,7 +37,7 @@ enum Category {
 int menuCategory = CAT_MAIN;
 int menuIndex = 0;
 bool menuOpen = false;
-int inputDelayFrames = 0;
+int inputDelayFrames = 0; // Global input delay for menu navigation/selection
 
 // --- UI Constants ---
 const float MENU_X = 0.02f;
@@ -158,30 +158,38 @@ void draw_main_menu() {
 
     ClampMenuIndex(menuIndex, numOptions);
 
-    if (inputDelayFrames > 0) return;
+    // Only process input if the global input delay is 0
+    if (inputDelayFrames == 0) {
+        int up = 0, down = 0;
+        if (IsKeyJustUp(VK_NUMPAD8) || PadPressed(DPAD_UP))   up = 1;
+        if (IsKeyJustUp(VK_NUMPAD2) || PadPressed(DPAD_DOWN)) down = 1;
 
-    int up = 0, down = 0;
-    if (IsKeyJustUp(VK_NUMPAD8) || PadPressed(DPAD_UP))   up = 1;
-    if (IsKeyJustUp(VK_NUMPAD2) || PadPressed(DPAD_DOWN)) down = 1;
-    if (up)   menuIndex = (menuIndex - 1 + numOptions) % numOptions;
-    if (down) menuIndex = (menuIndex + 1) % numOptions;
-
-    static bool prevA = false;
-    bool currA = PadPressed(BTN_A);
-    if ((IsKeyJustUp(VK_NUMPAD5) || (currA && !prevA))) {
-        switch (menuIndex) {
-        case 0: menuCategory = CAT_CHARACTER; menuIndex = 0; inputDelayFrames = 10; break;
-        case 1: menuCategory = CAT_CHEATS;    menuIndex = 0; inputDelayFrames = 10; break;
-        case 2: menuCategory = CAT_VEHICLE;   menuIndex = 0; inputDelayFrames = 10; break;
-        case 3: menuCategory = CAT_SAVELOAD;  menuIndex = 0; inputDelayFrames = 10; break;
-        case 4: menuCategory = CAT_CAR_SHOP;  menuIndex = 0; inputDelayFrames = 10; break;
-        case 5: menuCategory = CAT_GARAGE;    menuIndex = 0; inputDelayFrames = 10; break;
-        case 6: menuCategory = CAT_GUN_STORE; menuIndex = 0; inputDelayFrames = 10; break;
-        case 7: menuCategory = CAT_CREDITS;   menuIndex = 0; inputDelayFrames = 10; break;
-        case 8: menuOpen = false;             menuIndex = 0; inputDelayFrames = 10; break;
+        if (up) {
+            menuIndex = (menuIndex - 1 + numOptions) % numOptions;
+            inputDelayFrames = 10; // Apply delay after navigation
         }
+        if (down) {
+            menuIndex = (menuIndex + 1) % numOptions;
+            inputDelayFrames = 10; // Apply delay after navigation
+        }
+
+        static bool prevA = false;
+        bool currA = PadPressed(BTN_A);
+        if ((IsKeyJustUp(VK_NUMPAD5) || (currA && !prevA))) {
+            switch (menuIndex) {
+            case 0: menuCategory = CAT_CHARACTER; menuIndex = 0; inputDelayFrames = 10; break;
+            case 1: menuCategory = CAT_CHEATS;    menuIndex = 0; inputDelayFrames = 10; break;
+            case 2: menuCategory = CAT_VEHICLE;   menuIndex = 0; inputDelayFrames = 10; break;
+            case 3: menuCategory = CAT_SAVELOAD;  menuIndex = 0; inputDelayFrames = 10; break;
+            case 4: menuCategory = CAT_CAR_SHOP;  menuIndex = 0; inputDelayFrames = 10; break;
+            case 5: menuCategory = CAT_GARAGE;    menuIndex = 0; inputDelayFrames = 10; break;
+            case 6: menuCategory = CAT_GUN_STORE; menuIndex = 0; inputDelayFrames = 10; break;
+            case 7: menuCategory = CAT_CREDITS;   menuIndex = 0; inputDelayFrames = 10; break;
+            case 8: menuOpen = false;             menuIndex = 0; inputDelayFrames = 10; break;
+            }
+        }
+        prevA = currA;
     }
-    prevA = currA;
 }
 
 
@@ -216,40 +224,50 @@ void draw_saveload_menu() {
 
     ClampMenuIndex(saveloadMenuIndex, numOptions);
 
-    if (inputDelayFrames > 0) return;
+    // Only process input if the global input delay is 0
+    if (inputDelayFrames == 0) {
+        int up = 0, down = 0;
+        if (IsKeyJustUp(VK_NUMPAD8) || PadPressed(DPAD_UP))   up = 1;
+        if (IsKeyJustUp(VK_NUMPAD2) || PadPressed(DPAD_DOWN)) down = 1;
 
-    int up = 0, down = 0;
-    if (IsKeyJustUp(VK_NUMPAD8) || PadPressed(DPAD_UP))   up = 1;
-    if (IsKeyJustUp(VK_NUMPAD2) || PadPressed(DPAD_DOWN)) down = 1;
-    if (up)   saveloadMenuIndex = (saveloadMenuIndex - 1 + numOptions) % numOptions;
-    if (down) saveloadMenuIndex = (saveloadMenuIndex + 1) % numOptions;
-
-    static bool prevA = false;
-    bool currA = PadPressed(BTN_A);
-    if ((IsKeyJustUp(VK_NUMPAD5) || (currA && !prevA))) {
-        if (saveloadMenuIndex == 0) {
-            CharacterCreator_Save(characterFile);
-            Money_Save(playerStatsFile);
-            RankBar_Save(playerStatsFile);
-            RpEvents_Save(xpFile);
-            GunStore_Save();
-
-            UI::_SET_NOTIFICATION_TEXT_ENTRY("STRING");
-            UI::_ADD_TEXT_COMPONENT_STRING("Game Saved.");
-            UI::_DRAW_NOTIFICATION(false, true);
+        if (up) {
+            saveloadMenuIndex = (saveloadMenuIndex - 1 + numOptions) % numOptions;
+            inputDelayFrames = 10; // Apply delay after navigation
         }
-        else if (saveloadMenuIndex == 1) {
-            LoadGameData();
+        if (down) {
+            saveloadMenuIndex = (saveloadMenuIndex + 1) % numOptions;
+            inputDelayFrames = 10; // Apply delay after navigation
+        }
 
-            UI::_SET_NOTIFICATION_TEXT_ENTRY("STRING");
-            UI::_ADD_TEXT_COMPONENT_STRING("Game Loaded.");
-            UI::_DRAW_NOTIFICATION(false, true);
+        static bool prevA = false;
+        bool currA = PadPressed(BTN_A);
+        if ((IsKeyJustUp(VK_NUMPAD5) || (currA && !prevA))) {
+            if (saveloadMenuIndex == 0) {
+                CharacterCreator_Save(characterFile);
+                Money_Save(playerStatsFile);
+                RankBar_Save(playerStatsFile);
+                RpEvents_Save(xpFile);
+                GunStore_Save();
+
+                UI::_SET_NOTIFICATION_TEXT_ENTRY("STRING");
+                UI::_ADD_TEXT_COMPONENT_STRING("Game Saved.");
+                UI::_DRAW_NOTIFICATION(false, true);
+                inputDelayFrames = 10; // Apply delay after action
+            }
+            else if (saveloadMenuIndex == 1) {
+                LoadGameData();
+
+                UI::_SET_NOTIFICATION_TEXT_ENTRY("STRING");
+                UI::_ADD_TEXT_COMPONENT_STRING("Game Loaded.");
+                UI::_DRAW_NOTIFICATION(false, true);
+                inputDelayFrames = 10; // Apply delay after action
+            }
+            else if (saveloadMenuIndex == 2) {
+                menuCategory = CAT_MAIN; menuIndex = 3; saveloadMenuIndex = 0; inputDelayFrames = 10; // Apply delay after category change
+            }
         }
-        else if (saveloadMenuIndex == 2) {
-            menuCategory = CAT_MAIN; menuIndex = 3; saveloadMenuIndex = 0; inputDelayFrames = 10;
-        }
+        prevA = currA;
     }
-    prevA = currA;
 }
 
 void LoadGameData()
@@ -397,28 +415,32 @@ void ScriptMain() {
 
         bool menuCombo = PadHeld(BTN_RB) && PadHeld(BTN_A);
 
-        if (!menuOpen && (IsKeyJustUp(VK_F4) || (menuCombo && !prevMenuCombo))) {
-            menuOpen = true;
-            menuIndex = 0;
-            menuCategory = CAT_MAIN;
-            inputDelayFrames = 15;
-        }
-        prevMenuCombo = menuCombo;
+        // Menu Open/Close Logic (Consolidated Toggle)
+        if (inputDelayFrames == 0) { // Only process menu open/close if no global input delay
+            if (IsKeyJustUp(VK_F4) || (menuCombo && !prevMenuCombo)) {
+                menuOpen = !menuOpen; // Toggle menu state
+                menuIndex = 0; // Reset index when toggling
+                menuCategory = CAT_MAIN; // Always go back to main category when toggling
+                inputDelayFrames = 15; // Apply delay after toggling
+            }
 
-        bool currB = PadPressed(BTN_B);
-        if (menuOpen && inputDelayFrames == 0 && ((currB && !prevB) || IsKeyJustUp(VK_NUMPAD0))) {
-            if (menuCategory == CAT_MAIN) {
-                menuOpen = false;
-                menuIndex = 0;
-                inputDelayFrames = 10;
+            // This logic is for going back within sub-menus or closing from main using B/Numpad0
+            bool currB = PadPressed(BTN_B);
+            if (menuOpen && ((currB && !prevB) || IsKeyJustUp(VK_NUMPAD0))) {
+                if (menuCategory == CAT_MAIN) {
+                    menuOpen = false;
+                    menuIndex = 0;
+                    inputDelayFrames = 10; // Apply delay after closing
+                }
+                else {
+                    menuCategory = CAT_MAIN;
+                    menuIndex = 0;
+                    inputDelayFrames = 10; // Apply delay after category change
+                }
             }
-            else {
-                menuCategory = CAT_MAIN;
-                menuIndex = 0;
-                inputDelayFrames = 10;
-            }
+            prevB = currB;
         }
-        prevB = currB;
+
 
         if (menuOpen)
         {
@@ -460,6 +482,7 @@ void ScriptMain() {
         RankBar_DrawBar();
         Money_Draw();
 
+        // Decrement input delay frames at the end of the tick
         if (inputDelayFrames > 0) inputDelayFrames--;
 
         WAIT(0);
