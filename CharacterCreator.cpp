@@ -4,12 +4,28 @@
 #include <cstdio>
 #include <cstring>
 #include <cctype>
+#include <string> // Required for std::to_string
 
-// Clothing slot indices
+// Clothing slot indices (components)
 #define SLOT_UNDERSHIRT 8
 #define SLOT_TOP        11
 #define SLOT_LEGS       4
 #define SLOT_SHOES      6
+#define SLOT_SPECIAL    7 // Misc. Accessory slot
+
+// Prop slot indices (props)
+#define PROP_SLOT_HAT       0
+#define PROP_SLOT_GLASSES   1
+
+// Internal identifier for mask component within CharacterCreator_NextProp/Texture
+// This value is chosen to be distinct from PROP_SLOT_HAT, PROP_SLOT_GLASSES, and SLOT_SPECIAL
+// It does NOT represent the actual GTA component ID, which is handled inside CharacterCreator_Apply().
+#define INTERNAL_SLOT_MASK_COMPONENT 99 // Using a unique internal ID
+
+// The actual GTA component ID for masks, used in CharacterCreator_Apply()
+#define GTA_COMPONENT_MASK_SLOT 1
+
+// Prop slot indices (props) - PROP_SLOT_MASK_OLD is no longer used, removed for clarity.
 
 // --- GTA ONLINE PARENT DATA ---
 struct ParentEntry { const char* name; int index; };
@@ -46,6 +62,23 @@ static int hairIdx = 0, hairColor = 0, eyebrowIdx = 0, eyebrowColor = 0, eyeColo
 static float faceFeatures[NUM_FACE_FEATURES] = { 0 };
 static int topIdx = 0, undershirtIdx = 0, legIdx = 0, shoeIdx = 0;
 
+// Clothing texture variation state variables
+static int topTextureIdx = 0;
+static int undershirtTextureIdx = 0;
+static int legTextureIdx = 0;
+static int shoeTextureIdx = 0;
+
+// Prop variation state variables
+static int hatPropIdx = -1; // -1 means no prop
+static int hatPropTextureIdx = 0;
+static int glassesPropIdx = -1;
+static int glassesPropTextureIdx = 0;
+static int miscAccessoryIdx = -1; // For SLOT_SPECIAL (component 7)
+static int miscAccessoryTextureIdx = 0;
+static int maskComponentIdx = -1; // For SLOT_MASK_COMPONENT (component 1)
+static int maskComponentTextureIdx = 0;
+
+
 // Camera state
 bool wardrobeCamActive = false;
 bool creatorCamEnabled = false;
@@ -67,6 +100,10 @@ extern const RGBA HEADER_TEXT_COLOR;
 // Clamp helper
 template<typename T>
 static T clamp(T v, T lo, T hi) { return (v < lo) ? lo : (v > hi) ? hi : v; }
+
+// Function to display notifications (declared extern, defined in script.cpp)
+extern void ShowNotification(const char* message);
+
 
 // --- Camera Management ---
 void update_character_camera() {
@@ -128,10 +165,43 @@ void CharacterCreator_Apply() {
     PED::_SET_PED_EYE_COLOR(ped, eyeColor);
     for (int i = 0; i < NUM_FACE_FEATURES; ++i)
         PED::_SET_PED_FACE_FEATURE(ped, i, faceFeatures[i]);
-    PED::SET_PED_COMPONENT_VARIATION(ped, SLOT_TOP, topIdx, 0, 2);
-    PED::SET_PED_COMPONENT_VARIATION(ped, SLOT_UNDERSHIRT, undershirtIdx, 0, 2);
-    PED::SET_PED_COMPONENT_VARIATION(ped, SLOT_LEGS, legIdx, 0, 2);
-    PED::SET_PED_COMPONENT_VARIATION(ped, SLOT_SHOES, shoeIdx, 0, 2);
+
+    // Apply clothing with texture variations
+    PED::SET_PED_COMPONENT_VARIATION(ped, SLOT_TOP, topIdx, topTextureIdx, 2);
+    PED::SET_PED_COMPONENT_VARIATION(ped, SLOT_UNDERSHIRT, undershirtIdx, undershirtTextureIdx, 2);
+    PED::SET_PED_COMPONENT_VARIATION(ped, SLOT_LEGS, legIdx, legTextureIdx, 2);
+    PED::SET_PED_COMPONENT_VARIATION(ped, SLOT_SHOES, shoeIdx, shoeTextureIdx, 2);
+
+    // Apply props
+    if (hatPropIdx == -1) {
+        PED::CLEAR_PED_PROP(ped, PROP_SLOT_HAT);
+    }
+    else {
+        PED::SET_PED_PROP_INDEX(ped, PROP_SLOT_HAT, hatPropIdx, hatPropTextureIdx, false);
+    }
+
+    if (glassesPropIdx == -1) {
+        PED::CLEAR_PED_PROP(ped, PROP_SLOT_GLASSES);
+    }
+    else {
+        PED::SET_PED_PROP_INDEX(ped, PROP_SLOT_GLASSES, glassesPropIdx, glassesPropTextureIdx, false);
+    }
+
+    // Apply Misc. Accessory (SLOT_SPECIAL component)
+    if (miscAccessoryIdx == -1) {
+        PED::SET_PED_COMPONENT_VARIATION(ped, SLOT_SPECIAL, 0, 0, 2); // Set to default/empty if no accessory
+    }
+    else {
+        PED::SET_PED_COMPONENT_VARIATION(ped, SLOT_SPECIAL, miscAccessoryIdx, miscAccessoryTextureIdx, 2);
+    }
+
+    // Apply Mask (GTA_COMPONENT_MASK_SLOT component)
+    if (maskComponentIdx == -1) {
+        PED::SET_PED_COMPONENT_VARIATION(ped, GTA_COMPONENT_MASK_SLOT, 0, 0, 2); // Set to default/empty if no mask
+    }
+    else {
+        PED::SET_PED_COMPONENT_VARIATION(ped, GTA_COMPONENT_MASK_SLOT, maskComponentIdx, maskComponentTextureIdx, 2);
+    }
 }
 
 void CharacterCreator_Init() {}
@@ -144,8 +214,15 @@ void CharacterCreator_Save(const char* path) {
         gender, dadIdx, momIdx, blend, skin, hairIdx, hairColor, eyebrowIdx, eyebrowColor, eyeColor);
     for (int i = 0; i < NUM_FACE_FEATURES; ++i) fprintf(f, "face%d=%.3f\n", i, faceFeatures[i]);
     fprintf(f, "top=%d\nundershirt=%d\nlegs=%d\nshoes=%d\n", topIdx, undershirtIdx, legIdx, shoeIdx);
+    // Save new texture indices
+    fprintf(f, "topTexture=%d\nundershirtTexture=%d\nlegsTexture=%d\nshoesTexture=%d\n",
+        topTextureIdx, undershirtTextureIdx, legTextureIdx, shoeTextureIdx);
+    // Save prop indices
+    fprintf(f, "hatProp=%d\nhatPropTexture=%d\nglassesProp=%d\nglassesPropTexture=%d\nmiscAccessory=%d\nmiscAccessoryTexture=%d\nmaskComponent=%d\nmaskComponentTexture=%d\n",
+        hatPropIdx, hatPropTextureIdx, glassesPropIdx, glassesPropTextureIdx, miscAccessoryIdx, miscAccessoryTextureIdx, maskComponentIdx, maskComponentTextureIdx);
     fclose(f);
 }
+
 void CharacterCreator_Load(const char* path) {
     FILE* f = fopen(path, "r");
     if (!f) return;
@@ -170,6 +247,20 @@ void CharacterCreator_Load(const char* path) {
         else if (strcmp(line, "undershirt") == 0) undershirtIdx = atoi(val);
         else if (strcmp(line, "legs") == 0) legIdx = atoi(val);
         else if (strcmp(line, "shoes") == 0) shoeIdx = atoi(val);
+        // Load new texture indices
+        else if (strcmp(line, "topTexture") == 0) topTextureIdx = atoi(val);
+        else if (strcmp(line, "undershirtTexture") == 0) undershirtTextureIdx = atoi(val);
+        else if (strcmp(line, "legsTexture") == 0) legTextureIdx = atoi(val);
+        else if (strcmp(line, "shoesTexture") == 0) shoeTextureIdx = atoi(val);
+        // Load prop indices
+        else if (strcmp(line, "hatProp") == 0) hatPropIdx = atoi(val);
+        else if (strcmp(line, "hatPropTexture") == 0) hatPropTextureIdx = atoi(val);
+        else if (strcmp(line, "glassesProp") == 0) glassesPropIdx = atoi(val);
+        else if (strcmp(line, "glassesPropTexture") == 0) glassesPropTextureIdx = atoi(val);
+        else if (strcmp(line, "miscAccessory") == 0) miscAccessoryIdx = atoi(val); // Changed from mask to miscAccessory
+        else if (strcmp(line, "miscAccessoryTexture") == 0) miscAccessoryTextureIdx = atoi(val); // Changed from maskTexture to miscAccessoryTexture
+        else if (strcmp(line, "maskComponent") == 0) maskComponentIdx = atoi(val);
+        else if (strcmp(line, "maskComponentTexture") == 0) maskComponentTextureIdx = atoi(val);
     }
     fclose(f);
     CharacterCreator_Apply();
@@ -193,13 +284,204 @@ void CharacterCreator_NudgeFaceFeature(int idx, float delta) {
     faceFeatures[idx] = clamp(faceFeatures[idx] + delta, -1.0f, 1.0f);
     CharacterCreator_Apply();
 }
+
 void CharacterCreator_NextClothes(int slot, int dir) {
-    if (slot == 0) { topIdx = (topIdx + dir + NUM_TOPS) % NUM_TOPS; }
-    else if (slot == 1) { undershirtIdx = (undershirtIdx + dir + NUM_UNDERSHIRTS) % NUM_UNDERSHIRTS; }
-    else if (slot == 2) { legIdx = (legIdx + dir + NUM_LEGS) % NUM_LEGS; }
-    else if (slot == 3) { shoeIdx = (shoeIdx + dir + NUM_SHOES) % NUM_SHOES; }
+    Ped playerPed = PLAYER::PLAYER_PED_ID();
+    int* currentIdx = nullptr;
+    int* currentTextureIdx = nullptr;
+    int maxDrawables = 0;
+
+    if (slot == 0) { // Top
+        currentIdx = &topIdx;
+        currentTextureIdx = &topTextureIdx;
+        maxDrawables = PED::GET_NUMBER_OF_PED_DRAWABLE_VARIATIONS(playerPed, SLOT_TOP);
+    }
+    else if (slot == 1) { // Undershirt
+        currentIdx = &undershirtIdx;
+        currentTextureIdx = &undershirtTextureIdx;
+        maxDrawables = PED::GET_NUMBER_OF_PED_DRAWABLE_VARIATIONS(playerPed, SLOT_UNDERSHIRT);
+    }
+    else if (slot == 2) { // Legs
+        currentIdx = &legIdx;
+        currentTextureIdx = &legTextureIdx;
+        maxDrawables = PED::GET_NUMBER_OF_PED_DRAWABLE_VARIATIONS(playerPed, SLOT_LEGS);
+    }
+    else if (slot == 3) { // Shoes
+        currentIdx = &shoeIdx;
+        currentTextureIdx = &shoeTextureIdx;
+        maxDrawables = PED::GET_NUMBER_OF_PED_DRAWABLE_VARIATIONS(playerPed, SLOT_SHOES);
+    }
+
+    if (currentIdx != nullptr) {
+        *currentIdx = (*currentIdx + dir);
+        if (*currentIdx < 0) *currentIdx = maxDrawables - 1;
+        else if (*currentIdx >= maxDrawables) *currentIdx = 0;
+
+        // Reset texture index if drawable changed
+        int maxTextures = PED::GET_NUMBER_OF_PED_TEXTURE_VARIATIONS(playerPed, slot, *currentIdx);
+        if (*currentTextureIdx >= maxTextures) {
+            *currentTextureIdx = 0;
+        }
+    }
     CharacterCreator_Apply();
 }
+
+void CharacterCreator_NextClothesTexture(int slot, int dir) {
+    Ped playerPed = PLAYER::PLAYER_PED_ID();
+    int currentDrawable = 0;
+    int* currentTextureIdx = nullptr;
+    int maxTextures = 0;
+
+    if (slot == 0) { // Top Texture
+        currentDrawable = topIdx;
+        currentTextureIdx = &topTextureIdx;
+        maxTextures = PED::GET_NUMBER_OF_PED_TEXTURE_VARIATIONS(playerPed, SLOT_TOP, currentDrawable);
+    }
+    else if (slot == 1) { // Undershirt Texture
+        currentDrawable = undershirtIdx;
+        currentTextureIdx = &undershirtTextureIdx;
+        maxTextures = PED::GET_NUMBER_OF_PED_TEXTURE_VARIATIONS(playerPed, SLOT_UNDERSHIRT, currentDrawable);
+    }
+    else if (slot == 2) { // Legs Texture
+        currentDrawable = legIdx;
+        currentTextureIdx = &legTextureIdx;
+        maxTextures = PED::GET_NUMBER_OF_PED_TEXTURE_VARIATIONS(playerPed, SLOT_LEGS, currentDrawable);
+    }
+    else if (slot == 3) { // Shoes Texture
+        currentDrawable = shoeIdx;
+        currentTextureIdx = &shoeTextureIdx;
+        maxTextures = PED::GET_NUMBER_OF_PED_TEXTURE_VARIATIONS(playerPed, SLOT_SHOES, currentDrawable);
+    }
+
+    if (currentTextureIdx != nullptr && maxTextures > 0) {
+        *currentTextureIdx = (*currentTextureIdx + dir);
+        if (*currentTextureIdx < 0) *currentTextureIdx = maxTextures - 1;
+        else if (*currentTextureIdx >= maxTextures) *currentTextureIdx = 0;
+    }
+    else if (currentTextureIdx != nullptr) {
+        *currentTextureIdx = 0; // No textures available, default to 0
+    }
+    CharacterCreator_Apply();
+}
+
+// New functions for props
+void CharacterCreator_NextProp(int propSlot, int dir) {
+    Ped playerPed = PLAYER::PLAYER_PED_ID();
+    int* currentIdx = nullptr; // Use generic name for drawable/prop index
+    int* currentTextureIdx = nullptr;
+    int maxVariations = 0; // Use generic name for max drawables/props
+
+    if (propSlot == PROP_SLOT_HAT) {
+        currentIdx = &hatPropIdx;
+        currentTextureIdx = &hatPropTextureIdx;
+        maxVariations = PED::GET_NUMBER_OF_PED_PROP_DRAWABLE_VARIATIONS(playerPed, PROP_SLOT_HAT);
+    }
+    else if (propSlot == PROP_SLOT_GLASSES) {
+        currentIdx = &glassesPropIdx;
+        currentTextureIdx = &glassesPropTextureIdx;
+        maxVariations = PED::GET_NUMBER_OF_PED_PROP_DRAWABLE_VARIATIONS(playerPed, PROP_SLOT_GLASSES);
+    }
+    else if (propSlot == SLOT_SPECIAL) { // Misc. Accessory (Component slot)
+        currentIdx = &miscAccessoryIdx;
+        currentTextureIdx = &miscAccessoryTextureIdx;
+        maxVariations = PED::GET_NUMBER_OF_PED_DRAWABLE_VARIATIONS(playerPed, SLOT_SPECIAL);
+    }
+    else if (propSlot == INTERNAL_SLOT_MASK_COMPONENT) { // Mask (Component slot - using internal ID)
+        currentIdx = &maskComponentIdx;
+        currentTextureIdx = &maskComponentTextureIdx;
+        maxVariations = PED::GET_NUMBER_OF_PED_DRAWABLE_VARIATIONS(playerPed, GTA_COMPONENT_MASK_SLOT); // Use actual GTA component ID
+    }
+
+    if (currentIdx != nullptr) {
+        // Handle -1 (no prop/component) option
+        int tempIdx = *currentIdx;
+        if (dir > 0) { // Cycle forward
+            tempIdx++;
+            if (tempIdx > maxVariations - 1) { // If it goes past the last, loop to -1 (None)
+                tempIdx = -1;
+            }
+        }
+        else { // Cycle backward
+            tempIdx--;
+            if (tempIdx < -1) { // If it goes before -1, loop to the last
+                tempIdx = maxVariations - 1;
+            }
+        }
+        *currentIdx = tempIdx;
+
+        // Reset texture index if drawable changed or if "None" is selected
+        if (*currentIdx == -1) {
+            *currentTextureIdx = 0;
+        }
+        else {
+            int currentDrawableForTexture = *currentIdx; // For props and components, the drawable index is the current index
+            int maxTextures = 0;
+            if (propSlot == SLOT_SPECIAL) { // Misc. Accessory
+                maxTextures = PED::GET_NUMBER_OF_PED_TEXTURE_VARIATIONS(playerPed, SLOT_SPECIAL, currentDrawableForTexture);
+            }
+            else if (propSlot == INTERNAL_SLOT_MASK_COMPONENT) { // Mask
+                maxTextures = PED::GET_NUMBER_OF_PED_TEXTURE_VARIATIONS(playerPed, GTA_COMPONENT_MASK_SLOT, currentDrawableForTexture); // Use actual GTA component ID
+            }
+            else { // It's a prop slot
+                maxTextures = PED::GET_NUMBER_OF_PED_PROP_TEXTURE_VARIATIONS(playerPed, propSlot, currentDrawableForTexture);
+            }
+
+            if (*currentTextureIdx >= maxTextures) {
+                *currentTextureIdx = 0;
+            }
+        }
+    }
+    CharacterCreator_Apply();
+}
+
+void CharacterCreator_NextPropTexture(int propSlot, int dir) {
+    Ped playerPed = PLAYER::PLAYER_PED_ID();
+    int currentDrawableIdx = 0;
+    int* currentTextureIdx = nullptr;
+    int maxTextures = 0;
+
+    if (propSlot == PROP_SLOT_HAT) {
+        currentDrawableIdx = hatPropIdx;
+        currentTextureIdx = &hatPropTextureIdx;
+    }
+    else if (propSlot == PROP_SLOT_GLASSES) {
+        currentDrawableIdx = glassesPropIdx;
+        currentTextureIdx = &glassesPropTextureIdx;
+    }
+    else if (propSlot == SLOT_SPECIAL) { // Misc. Accessory
+        currentDrawableIdx = miscAccessoryIdx;
+        currentTextureIdx = &miscAccessoryTextureIdx;
+    }
+    else if (propSlot == INTERNAL_SLOT_MASK_COMPONENT) { // Mask
+        currentDrawableIdx = maskComponentIdx;
+        currentTextureIdx = &maskComponentTextureIdx;
+    }
+
+    // Only proceed if a drawable is actually selected (not -1) and texture index pointer is valid
+    if (currentDrawableIdx != -1 && currentTextureIdx != nullptr) {
+        if (propSlot == SLOT_SPECIAL) { // Misc. Accessory
+            maxTextures = PED::GET_NUMBER_OF_PED_TEXTURE_VARIATIONS(playerPed, SLOT_SPECIAL, currentDrawableIdx);
+        }
+        else if (propSlot == INTERNAL_SLOT_MASK_COMPONENT) { // Mask
+            maxTextures = PED::GET_NUMBER_OF_PED_TEXTURE_VARIATIONS(playerPed, GTA_COMPONENT_MASK_SLOT, currentDrawableIdx); // Use actual GTA component ID
+        }
+        else { // It's a prop slot
+            maxTextures = PED::GET_NUMBER_OF_PED_PROP_TEXTURE_VARIATIONS(playerPed, propSlot, currentDrawableIdx);
+        }
+
+        if (maxTextures > 0) {
+            *currentTextureIdx = (*currentTextureIdx + dir);
+            if (*currentTextureIdx < 0) *currentTextureIdx = maxTextures - 1;
+            else if (*currentTextureIdx >= maxTextures) *currentTextureIdx = 0;
+        }
+        else {
+            *currentTextureIdx = 0; // No textures available, default to 0
+        }
+    }
+    CharacterCreator_Apply();
+}
+
+
 void CharacterCreator_NextEyeColor(int dir) { eyeColor = (eyeColor + dir + NUM_EYECOLORS) % NUM_EYECOLORS; CharacterCreator_Apply(); }
 
 // --- Menu logic with controller support ---
@@ -222,7 +504,7 @@ void CharacterCreator_DrawMenu(int& menuIndex, int& menuCategory) {
         numOptions = NUM_FACE_FEATURES + 1; // Face page has 20 features + Back button
     }
     else if (creatorPage == CREATOR_CLOTHES) {
-        numOptions = 6; // Clothes page has 5 clothing options + Back button
+        numOptions = 18; // 4 clothing drawables + 4 texture variations + 2 prop drawables + 2 prop textures + 2 component drawables + 2 component textures + Wardrobe Cam + Back to Main
     }
 
     // Calculate total height including tab bar and options
@@ -261,10 +543,19 @@ void CharacterCreator_DrawMenu(int& menuIndex, int& menuCategory) {
     }
     UI::SET_TEXT_CENTRE(0); // Reset text alignment after drawing tabs
 
+    // Handle Tab Switching Input
+    extern int inputDelayFrames; // Access global input delay
+    if (inputDelayFrames == 0) { // Only process tab switching if no global input delay
+        if (IsKeyJustUp(VK_NUMPAD7) || PadPressed(BTN_LB)) {
+            creatorPage = (creatorPage + 2) % 3; menuIndex = 0;
+            inputDelayFrames = 10; // Apply delay after tab change
+        }
+        if (IsKeyJustUp(VK_NUMPAD9) || PadPressed(BTN_RB)) {
+            creatorPage = (creatorPage + 1) % 3; menuIndex = 0;
+            inputDelayFrames = 10; // Apply delay after tab change
+        }
+    }
 
-    // --- Handle Tab Switching Input ---
-    if (IsKeyJustUp(VK_NUMPAD7) || PadPressed(BTN_LB)) { creatorPage = (creatorPage + 2) % 3; menuIndex = 0; }
-    if (IsKeyJustUp(VK_NUMPAD9) || PadPressed(BTN_RB)) { creatorPage = (creatorPage + 1) % 3; menuIndex = 0; }
 
     // --- Page-Specific Options Drawing ---
     float optionsStartY = y; // Options start at MENU_Y, directly below the tab bar visually
@@ -296,32 +587,35 @@ void CharacterCreator_DrawMenu(int& menuIndex, int& menuCategory) {
         }
 
         int up = 0, down = 0, left = 0, right = 0;
-        if (IsKeyJustUp(VK_NUMPAD8) || PadPressed(DPAD_UP)) up = 1;
-        if (IsKeyJustUp(VK_NUMPAD2) || PadPressed(DPAD_DOWN)) down = 1;
-        if (IsKeyJustUp(VK_NUMPAD4) || PadPressed(DPAD_LEFT)) left = 1;
-        if (IsKeyJustUp(VK_NUMPAD6) || PadPressed(DPAD_RIGHT)) right = 1;
-        if (up) menuIndex = (menuIndex - 1 + numMainOptions) % numMainOptions;
-        if (down) menuIndex = (menuIndex + 1) % numMainOptions;
+        if (inputDelayFrames == 0) { // Apply input delay to main menu navigation
+            if (IsKeyJustUp(VK_NUMPAD8) || PadPressed(DPAD_UP)) up = 1;
+            if (IsKeyJustUp(VK_NUMPAD2) || PadPressed(DPAD_DOWN)) down = 1;
+            if (IsKeyJustUp(VK_NUMPAD4) || PadPressed(DPAD_LEFT)) left = 1;
+            if (IsKeyJustUp(VK_NUMPAD6) || PadPressed(DPAD_RIGHT)) right = 1;
 
-        int dir = right - left;
-        if (dir) {
-            switch (menuIndex) {
-            case 1: CharacterCreator_ToggleGender(); break;
-            case 2: CharacterCreator_NextDad(dir); break;
-            case 3: CharacterCreator_NextMom(dir); break;
-            case 4: CharacterCreator_AdjustShapeBlend(dir); break;
-            case 5: CharacterCreator_AdjustSkinBlend(dir); break;
-            case 6: CharacterCreator_NextHairStyle(dir); break;
-            case 7: CharacterCreator_NextHairColor(dir); break;
-            case 8: CharacterCreator_NextEyebrow(dir); break;
-            case 9: CharacterCreator_NextEyebrowColor(dir); break;
-            case 10: CharacterCreator_NextEyeColor(dir); break;
+            if (up) { menuIndex = (menuIndex - 1 + numMainOptions) % numMainOptions; inputDelayFrames = 10; }
+            if (down) { menuIndex = (menuIndex + 1) % numMainOptions; inputDelayFrames = 10; }
+
+            int dir = right - left;
+            if (dir) {
+                switch (menuIndex) {
+                case 1: CharacterCreator_ToggleGender(); inputDelayFrames = 10; break;
+                case 2: CharacterCreator_NextDad(dir); inputDelayFrames = 10; break;
+                case 3: CharacterCreator_NextMom(dir); inputDelayFrames = 10; break;
+                case 4: CharacterCreator_AdjustShapeBlend(dir); inputDelayFrames = 10; break;
+                case 5: CharacterCreator_AdjustSkinBlend(dir); inputDelayFrames = 10; break;
+                case 6: CharacterCreator_NextHairStyle(dir); inputDelayFrames = 10; break;
+                case 7: CharacterCreator_NextHairColor(dir); inputDelayFrames = 10; break;
+                case 8: CharacterCreator_NextEyebrow(dir); inputDelayFrames = 10; break;
+                case 9: CharacterCreator_NextEyebrowColor(dir); inputDelayFrames = 10; break;
+                case 10: CharacterCreator_NextEyeColor(dir); inputDelayFrames = 10; break;
+                }
             }
-        }
-        if (IsKeyJustUp(VK_NUMPAD5) || PadPressed(BTN_A)) {
-            if (menuIndex == 0) creatorCamEnabled = !creatorCamEnabled;
-            if (menuIndex == 11) { creatorPage = CREATOR_FACE; menuIndex = 0; }
-            if (menuIndex == 12) { creatorPage = CREATOR_CLOTHES; menuIndex = 0; }
+            if (IsKeyJustUp(VK_NUMPAD5) || PadPressed(BTN_A)) {
+                if (menuIndex == 0) { creatorCamEnabled = !creatorCamEnabled; inputDelayFrames = 10; }
+                if (menuIndex == 11) { creatorPage = CREATOR_FACE; menuIndex = 0; inputDelayFrames = 10; }
+                if (menuIndex == 12) { creatorPage = CREATOR_CLOTHES; menuIndex = 0; inputDelayFrames = 10; }
+            }
         }
         if (PadPressed(BTN_B)) {
             creatorCamEnabled = false;
@@ -347,61 +641,117 @@ void CharacterCreator_DrawMenu(int& menuIndex, int& menuCategory) {
         }
 
         int up = 0, down = 0, left = 0, right = 0;
-        if (IsKeyJustUp(VK_NUMPAD8) || PadPressed(DPAD_UP)) up = 1;
-        if (IsKeyJustUp(VK_NUMPAD2) || PadPressed(DPAD_DOWN)) down = 1;
-        if (IsKeyJustUp(VK_NUMPAD4) || PadPressed(DPAD_LEFT)) left = 1;
-        if (IsKeyJustUp(VK_NUMPAD6) || PadPressed(DPAD_RIGHT)) right = 1;
-        if (up) menuIndex = (menuIndex - 1 + numFaceOptions) % numFaceOptions;
-        if (down) menuIndex = (menuIndex + 1) % numFaceOptions;
+        if (inputDelayFrames == 0) { // Apply input delay to face menu navigation
+            if (IsKeyJustUp(VK_NUMPAD8) || PadPressed(DPAD_UP)) up = 1;
+            if (IsKeyJustUp(VK_NUMPAD2) || PadPressed(DPAD_DOWN)) down = 1;
+            if (IsKeyJustUp(VK_NUMPAD4) || PadPressed(DPAD_LEFT)) left = 1;
+            if (IsKeyJustUp(VK_NUMPAD6) || PadPressed(DPAD_RIGHT)) right = 1;
 
-        int dir = right - left;
-        if (dir && menuIndex < NUM_FACE_FEATURES) CharacterCreator_NudgeFaceFeature(menuIndex, dir * 0.05f);
+            if (up) { menuIndex = (menuIndex - 1 + numFaceOptions) % numFaceOptions; inputDelayFrames = 10; }
+            if (down) { menuIndex = (menuIndex + 1) % numFaceOptions; inputDelayFrames = 10; }
 
-        if (IsKeyJustUp(VK_NUMPAD5) || PadPressed(BTN_A)) {
-            if (menuIndex == numFaceOptions - 1) { creatorPage = CREATOR_MAIN; menuIndex = 0; }
+            int dir = right - left;
+            if (dir && menuIndex < NUM_FACE_FEATURES) { CharacterCreator_NudgeFaceFeature(menuIndex, dir * 0.05f); inputDelayFrames = 10; }
+
+            if (IsKeyJustUp(VK_NUMPAD5) || PadPressed(BTN_A)) {
+                if (menuIndex == numFaceOptions - 1) { creatorPage = CREATOR_MAIN; menuIndex = 0; inputDelayFrames = 10; }
+            }
         }
-        if (PadPressed(BTN_B)) { creatorPage = CREATOR_MAIN; menuIndex = 0; }
+        if (PadPressed(BTN_B)) { creatorPage = CREATOR_MAIN; menuIndex = 0; inputDelayFrames = 10; }
     }
     else if (creatorPage == CREATOR_CLOTHES) {
-        const int numClothesOptions = 6; // 5 clothing options + Back button
+        // Updated numClothesOptions for new mask slot and misc accessory
+        const int numClothesOptions = 18; // 4 clothing drawables + 4 texture variations + 2 prop drawables + 2 prop textures + 2 component drawables + 2 component textures + Wardrobe Cam + Back to Main
         const char* labels[numClothesOptions] = {
-            "Top", "Undershirt", "Legs", "Shoes", "Wardrobe Cam", "Back to Main"
+            "Top", "Top Texture", "Undershirt", "Undershirt Texture",
+            "Legs", "Legs Texture", "Shoes", "Shoes Texture",
+            "Hat", "Hat Texture", "Glasses", "Glasses Texture",
+            "Misc. Accessory", "Misc. Accessory Texture", // Renamed from Mask
+            "Mask", "Mask Texture", // New dedicated Mask slot
+            "Wardrobe Cam", "Back to Main"
         };
 
         for (int i = 0; i < numClothesOptions; ++i) {
             char vbuf[32];
             if (i == 0) sprintf_s(vbuf, "< %d >", topIdx);
-            else if (i == 1) sprintf_s(vbuf, "< %d >", undershirtIdx);
-            else if (i == 2) sprintf_s(vbuf, "< %d >", legIdx);
-            else if (i == 3) sprintf_s(vbuf, "< %d >", shoeIdx);
-            else if (i == 4) sprintf_s(vbuf, "%s", wardrobeCamActive ? "[ON]" : "[OFF]");
+            else if (i == 1) sprintf_s(vbuf, "< %d >", topTextureIdx);
+            else if (i == 2) sprintf_s(vbuf, "< %d >", undershirtIdx);
+            else if (i == 3) sprintf_s(vbuf, "< %d >", undershirtTextureIdx);
+            else if (i == 4) sprintf_s(vbuf, "< %d >", legIdx);
+            else if (i == 5) sprintf_s(vbuf, "< %d >", legTextureIdx);
+            else if (i == 6) sprintf_s(vbuf, "< %d >", shoeIdx);
+            else if (i == 7) sprintf_s(vbuf, "< %d >", shoeTextureIdx);
+            else if (i == 8) { // Hat
+                if (hatPropIdx == -1) sprintf_s(vbuf, "< None >");
+                else sprintf_s(vbuf, "< %d >", hatPropIdx);
+            }
+            else if (i == 9) sprintf_s(vbuf, "< %d >", hatPropTextureIdx);
+            else if (i == 10) { // Glasses
+                if (glassesPropIdx == -1) sprintf_s(vbuf, "< None >");
+                else sprintf_s(vbuf, "< %d >", glassesPropIdx);
+            }
+            else if (i == 11) sprintf_s(vbuf, "< %d >", glassesPropTextureIdx);
+            else if (i == 12) { // Misc. Accessory
+                if (miscAccessoryIdx == -1) sprintf_s(vbuf, "< None >");
+                else sprintf_s(vbuf, "< %d >", miscAccessoryIdx);
+            }
+            else if (i == 13) sprintf_s(vbuf, "< %d >", miscAccessoryTextureIdx);
+            else if (i == 14) { // Mask (new dedicated slot)
+                if (maskComponentIdx == -1) sprintf_s(vbuf, "< None >");
+                else sprintf_s(vbuf, "< %d >", maskComponentIdx);
+            }
+            else if (i == 15) sprintf_s(vbuf, "< %d >", maskComponentTextureIdx);
+            else if (i == 16) sprintf_s(vbuf, "%s", wardrobeCamActive ? "[ON]" : "[OFF]");
 
-            if (i < 5) DrawPairedMenuOption(labels[i], vbuf, x, optionsStartY + h * i, w, h, i == menuIndex);
-            else DrawMenuOption(labels[i], x, optionsStartY + h * i, w, h, i == menuIndex);
+            DrawPairedMenuOption(labels[i], vbuf, x, optionsStartY + h * i, w, h, i == menuIndex);
         }
 
         int up = 0, down = 0, left = 0, right = 0;
-        if (IsKeyJustUp(VK_NUMPAD8) || PadPressed(DPAD_UP)) up = 1;
-        if (IsKeyJustUp(VK_NUMPAD2) || PadPressed(DPAD_DOWN)) down = 1;
-        if (IsKeyJustUp(VK_NUMPAD4) || PadPressed(DPAD_LEFT)) left = 1;
-        if (IsKeyJustUp(VK_NUMPAD6) || PadPressed(DPAD_RIGHT)) right = 1;
-        if (up) menuIndex = (menuIndex - 1 + numClothesOptions) % numClothesOptions;
-        if (down) menuIndex = (menuIndex + 1) % numClothesOptions;
+        if (inputDelayFrames == 0) { // Apply input delay to clothes menu navigation
+            if (IsKeyJustUp(VK_NUMPAD8) || PadPressed(DPAD_UP)) up = 1;
+            if (IsKeyJustUp(VK_NUMPAD2) || PadPressed(DPAD_DOWN)) down = 1;
+            if (IsKeyJustUp(VK_NUMPAD4) || PadPressed(DPAD_LEFT)) left = 1;
+            if (IsKeyJustUp(VK_NUMPAD6) || PadPressed(DPAD_RIGHT)) right = 1;
 
-        int dir = right - left;
-        if (dir && menuIndex < 4) CharacterCreator_NextClothes(menuIndex, dir);
+            if (up) { menuIndex = (menuIndex - 1 + numClothesOptions) % numClothesOptions; inputDelayFrames = 10; }
+            if (down) { menuIndex = (menuIndex + 1) % numClothesOptions; inputDelayFrames = 10; }
 
-        if (IsKeyJustUp(VK_NUMPAD5) || PadPressed(BTN_A)) {
-            if (menuIndex == 4) {
-                wardrobeCamActive = !wardrobeCamActive;
-                creatorCamEnabled = wardrobeCamActive; // Keep creatorCamEnabled in sync
+            int dir = right - left;
+            if (dir) {
+                switch (menuIndex) {
+                case 0: CharacterCreator_NextClothes(0, dir); inputDelayFrames = 10; break; // Top Drawable
+                case 1: CharacterCreator_NextClothesTexture(0, dir); inputDelayFrames = 10; break; // Top Texture
+                case 2: CharacterCreator_NextClothes(1, dir); inputDelayFrames = 10; break; // Undershirt Drawable
+                case 3: CharacterCreator_NextClothesTexture(1, dir); inputDelayFrames = 10; break; // Undershirt Texture
+                case 4: CharacterCreator_NextClothes(2, dir); inputDelayFrames = 10; break; // Legs Drawable
+                case 5: CharacterCreator_NextClothesTexture(2, dir); inputDelayFrames = 10; break; // Legs Texture
+                case 6: CharacterCreator_NextClothes(3, dir); inputDelayFrames = 10; break; // Shoes Drawable
+                case 7: CharacterCreator_NextClothesTexture(3, dir); inputDelayFrames = 10; break; // Shoes Texture
+                case 8: CharacterCreator_NextProp(PROP_SLOT_HAT, dir); inputDelayFrames = 10; break; // Hat Drawable
+                case 9: CharacterCreator_NextPropTexture(PROP_SLOT_HAT, dir); inputDelayFrames = 10; break; // Hat Texture
+                case 10: CharacterCreator_NextProp(PROP_SLOT_GLASSES, dir); inputDelayFrames = 10; break; // Glasses Drawable
+                case 11: CharacterCreator_NextPropTexture(PROP_SLOT_GLASSES, dir); inputDelayFrames = 10; break; // Glasses Texture
+                case 12: CharacterCreator_NextMiscAccessory(SLOT_SPECIAL, dir); inputDelayFrames = 10; break; // Misc. Accessory Drawable
+                case 13: CharacterCreator_NextMiscAccessoryTexture(SLOT_SPECIAL, dir); inputDelayFrames = 10; break; // Misc. Accessory Texture
+                case 14: CharacterCreator_NextMask(INTERNAL_SLOT_MASK_COMPONENT, dir); inputDelayFrames = 10; break; // Mask Drawable (using internal ID)
+                case 15: CharacterCreator_NextMaskTexture(INTERNAL_SLOT_MASK_COMPONENT, dir); inputDelayFrames = 10; break; // Mask Texture (using internal ID)
+                }
             }
-            if (menuIndex == 5) {
-                creatorPage = CREATOR_MAIN;
-                menuIndex = 0;
+
+            if (IsKeyJustUp(VK_NUMPAD5) || PadPressed(BTN_A)) {
+                if (menuIndex == 16) { // Wardrobe Cam
+                    wardrobeCamActive = !wardrobeCamActive;
+                    creatorCamEnabled = wardrobeCamActive; // Keep creatorCamEnabled in sync
+                    inputDelayFrames = 10;
+                }
+                if (menuIndex == numClothesOptions - 1) { // Back to Main
+                    creatorPage = CREATOR_MAIN;
+                    menuIndex = 0;
+                    inputDelayFrames = 10;
+                }
             }
         }
-        if (PadPressed(BTN_B)) { creatorPage = CREATOR_MAIN; menuIndex = 0; }
+        if (PadPressed(BTN_B)) { creatorPage = CREATOR_MAIN; menuIndex = 0; inputDelayFrames = 10; }
     }
 
     if (creatorCamEnabled) {
@@ -410,4 +760,31 @@ void CharacterCreator_DrawMenu(int& menuIndex, int& menuCategory) {
     else {
         stop_character_camera();
     }
+}
+
+// Definitions for new functions to resolve linker errors.
+// These functions act as wrappers to the existing generic prop/component handlers.
+
+void CharacterCreator_NextMask(int slot, int dir) {
+    // This calls the generic prop handling function, which correctly
+    // processes variations for INTERNAL_SLOT_MASK_COMPONENT (which is 'slot' here).
+    CharacterCreator_NextProp(slot, dir);
+}
+
+void CharacterCreator_NextMaskTexture(int slot, int dir) {
+    // This calls the generic prop texture handling function, which correctly
+    // processes texture variations for INTERNAL_SLOT_MASK_COMPONENT (which is 'slot' here).
+    CharacterCreator_NextPropTexture(slot, dir);
+}
+
+void CharacterCreator_NextMiscAccessory(int slot, int dir) {
+    // This calls the generic prop handling function, which correctly
+    // processes variations for SLOT_SPECIAL (which is 'slot' here).
+    CharacterCreator_NextProp(slot, dir);
+}
+
+void CharacterCreator_NextMiscAccessoryTexture(int slot, int dir) {
+    // This calls the generic prop texture handling function, which correctly
+    // processes texture variations for SLOT_SPECIAL (which is 'slot' here).
+    CharacterCreator_NextPropTexture(slot, dir);
 }

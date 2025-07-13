@@ -9,9 +9,10 @@
 #include "input.h"
 #include "CarShop.h"
 #include "Garage.h"
-#include "GunStore.h"
-#include "Credits.h" // Ensure Credits.h is included for Credits_Tick()
+#include "GunStore.h" // Include GunStore.h for the new function
+#include "Credits.h"
 #include "CarExport.h"
+#include "Properties.h" // Ensure Properties.h is included
 #include <windows.h>
 #include <ctime>
 #include <cstdio>
@@ -28,6 +29,10 @@
 const char* characterFile = "GTAOfflineChar.ini";
 const char* playerStatsFile = "GTAOfflinePlayerStats.ini";
 const char* xpFile = "GTAOfflineXP.ini";
+const char* propertiesFile = "GTAOfflineProperties.ini"; // Define properties file name
+
+// --- Game Logic Constants ---
+const int BRIBE_AMOUNT = 5000; // Define the bribe amount here
 
 // --- Menu State ---
 enum Category {
@@ -64,12 +69,27 @@ static DWORD spawnTime = 0;
 static bool welcomeMessagesShown = false;
 static bool isCustomCharacterActive = true; // Track if the custom character is currently applied
 
+// State for handling the "busted" event
+enum BustedState {
+    BustedState_None = 0,
+    BustedState_Initiated,
+    BustedState_Recovering
+};
+static BustedState currentBustedState = BustedState_None;
+
+
 // Forward declarations
 void draw_car_shop_menu();
 void draw_garage_menu();
 void draw_gun_store_menu();
 void draw_credits_menu();
 void LoadGameData();
+
+// Native function declarations
+// These assume they are available through ScriptHookV's headers (e.g., natives.h)
+// The hash 0x388A47C51ABDAC8E is used to invoke the native.
+static BOOL IS_PLAYER_BEING_ARRESTED(Player player, BOOL atArresting) { return invoke<BOOL>(0x388A47C51ABDAC8E, player, atArresting); }
+static BOOL IS_PED_CUFFED(Ped ped) { return invoke<BOOL>(0x74E559B3BC910685, ped); }
 
 
 // --- Drawing Helper Function Definitions ---
@@ -248,6 +268,7 @@ void draw_saveload_menu() {
                 RankBar_Save(playerStatsFile);
                 RpEvents_Save(xpFile);
                 GunStore_Save();
+                Properties_Save(propertiesFile); // Save properties here
 
                 UI::_SET_NOTIFICATION_TEXT_ENTRY("STRING");
                 UI::_ADD_TEXT_COMPONENT_STRING("Game Saved.");
@@ -283,6 +304,7 @@ void LoadGameData()
 
     RpEvents_Load(xpFile);
     GunStore_Load();
+    Properties_Load(propertiesFile); // Load properties here
     WAIT(100);
 
     CharacterCreator_Apply();
@@ -326,8 +348,9 @@ void ScriptMain() {
     CarShop_Init();
     Garage_Init();
     GunStore_Init();
-    Credits_Init(); // Initialize Credits module
+    Credits_Init();
     CarExport_Init();
+    Properties_Init();
 
     SkipIntroAndLoadCharacter();
 
@@ -344,7 +367,7 @@ void ScriptMain() {
         Player player = PLAYER::PLAYER_ID();
         Ped playerPed = PLAYER::PLAYER_PED_ID();
 
-        // --- Custom Character Respawn Logic ---
+        // --- Custom Character Respawn Logic (Death) ---
         if (PLAYER::IS_PLAYER_DEAD(player)) {
             if (isCustomCharacterActive) {
                 // If custom character is active and player dies, switch to a default model for respawn
@@ -372,17 +395,79 @@ void ScriptMain() {
                 spawnTime = GetTickCount64(); // Reset spawn time for protection
             }
         }
-        // --- End Custom Character Respawn Logic ---
+        // --- End Custom Character Respawn Logic (Death) ---
+
+        // --- Custom Character Respawn Logic (Busted) ---
+        bool currBeingArrested = IS_PLAYER_BEING_ARRESTED(player, true);
+        bool currCuffed = IS_PED_CUFFED(playerPed);
+
+        switch (currentBustedState) {
+        case BustedState_None:
+            // Detect if player just started being arrested and is not dead
+            if (currBeingArrested && !PLAYER::IS_PLAYER_DEAD(player)) {
+                if (isCustomCharacterActive) {
+                    // Temporarily switch to generic model to allow game to handle arrest
+                    isCustomCharacterActive = false;
+                    PLAYER::SET_PLAYER_MODEL(player, GAMEPLAY::GET_HASH_KEY("player_g"));
+
+                    // Ensure fade in after arrest
+                    GAMEPLAY::SET_FADE_IN_AFTER_DEATH_ARREST(true);
+
+                    // Clear wanted level immediately
+                    PLAYER::SET_PLAYER_WANTED_LEVEL(player, 0, false);
+                    PLAYER::SET_PLAYER_WANTED_LEVEL_NOW(player, true);
+                    currentBustedState = BustedState_Initiated; // Transition to initiated state
+                    UI::_SET_NOTIFICATION_TEXT_ENTRY("STRING");
+                    UI::_ADD_TEXT_COMPONENT_STRING("~b~You are being busted...");
+                    UI::_DRAW_NOTIFICATION(false, true);
+                }
+            }
+            break;
+
+        case BustedState_Initiated:
+            // Wait for the player to no longer be actively arrested or cuffed, and screen to fade in
+            // Also ensure the player is actually playing (i.e., not in a loading screen or transition)
+            if (!currBeingArrested && !currCuffed && CAM::IS_SCREEN_FADED_IN() && PLAYER::IS_PLAYER_PLAYING(player)) {
+                if (!isCustomCharacterActive) { // Only re-apply if it was temporarily disabled
+                    // Handle bribe or confiscation
+                    if (Money_Get() >= BRIBE_AMOUNT) {
+                        Money_Add(-BRIBE_AMOUNT); // Deduct bribe
+                        UI::_SET_NOTIFICATION_TEXT_ENTRY("STRING");
+                        UI::_ADD_TEXT_COMPONENT_STRING("~g~Bribe paid! ($5000)");
+                        UI::_DRAW_NOTIFICATION(false, true);
+                    }
+                    else {
+                        GunStore_ClearAllBoughtWeapons(); // Clear all bought weapons from persistent storage
+                        WEAPON::REMOVE_ALL_PED_WEAPONS(playerPed, false); // Remove all weapons from player's inventory
+                        UI::_SET_NOTIFICATION_TEXT_ENTRY("STRING");
+                        UI::_ADD_TEXT_COMPONENT_STRING("~r~Not enough money! All your bought guns were confiscated!");
+                        UI::_DRAW_NOTIFICATION(false, true);
+                    }
+
+                    CharacterCreator_Apply();
+                    isCustomCharacterActive = true; // Mark custom character as active again
+                    spawnProtectionActive = true; // Re-enable spawn protection after being busted
+                    spawnTime = GetTickCount64(); // Reset spawn time for protection
+                    currentBustedState = BustedState_None; // Reset state to None
+                }
+            }
+            // If for some reason the player died during the arrest, reset state
+            if (PLAYER::IS_PLAYER_DEAD(player)) {
+                currentBustedState = BustedState_None;
+            }
+            break;
+        }
+        // --- End Custom Character Respawn Logic (Busted) ---
 
 
         if (spawnProtectionActive) {
             ENTITY::SET_ENTITY_INVINCIBLE(playerPed, true);
             if (GetTickCount64() - spawnTime > 15000) {
                 ENTITY::SET_ENTITY_INVINCIBLE(playerPed, false);
-                spawnProtectionActive = false;
                 UI::_SET_NOTIFICATION_TEXT_ENTRY("STRING");
                 UI::_ADD_TEXT_COMPONENT_STRING("Spawn protection has worn off.");
                 UI::_DRAW_NOTIFICATION(false, true);
+                spawnProtectionActive = false; // Set to false after notification
             }
         }
 
@@ -408,6 +493,7 @@ void ScriptMain() {
         Garage_Tick();
         GunStore_Tick();
         CarExport_Tick();
+        Properties_Tick();
 
         g_vehicleMenu.Tick();
 

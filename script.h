@@ -11,6 +11,7 @@
 #include "..\..\inc\enums.h"
 
 #include "..\..\inc\main.h"
+#include "Properties.h"
 
 // --- Defensive macros ---
 #define VALID_PED(ped)     ((ped) != 0 && ENTITY::DOES_ENTITY_EXIST(ped))

@@ -33,6 +33,12 @@ void GunStore_AddWeapon(Hash weaponHash) {
     }
 }
 
+// New function to clear all bought weapons
+void GunStore_ClearAllBoughtWeapons() {
+    g_unlockedWeapons.clear(); // Clear the list of unlocked weapons
+    GunStore_Save(); // Save the empty list to file
+}
+
 void GunStore_Save() {
     std::ofstream file("GTAOfflineGunLocker.ini");
     if (file.is_open()) {
@@ -138,8 +144,11 @@ void GunStore_Init() {
 void GunStore_Tick() {
     Ped playerPed = PLAYER::PLAYER_PED_ID();
     for (const auto& weaponHash : g_unlockedWeapons) {
+        // Only give weapon if the player doesn't already have it
+        // This prevents endlessly giving ammo if the player already has the weapon
         if (!WEAPON::HAS_PED_GOT_WEAPON(playerPed, weaponHash, false)) {
-            WEAPON::GIVE_WEAPON_TO_PED(playerPed, weaponHash, 250, false, true);
+            // Give weapon with max ammo and select it
+            WEAPON::GIVE_WEAPON_TO_PED(playerPed, weaponHash, 9999, false, true);
         }
     }
 }
@@ -179,17 +188,35 @@ void draw_gun_store_menu() {
         DrawMenuOption("Back", MENU_X, optionY + MENU_H * g_weaponCategories.size(), MENU_W, MENU_H, g_weaponCategories.size() == gunCategoryIndex);
 
         // Navigation and activation
-        if (IsKeyJustUp(VK_NUMPAD8) || PadPressed(DPAD_UP)) gunCategoryIndex = (gunCategoryIndex - 1 + numOptions) % numOptions;
-        if (IsKeyJustUp(VK_NUMPAD2) || PadPressed(DPAD_DOWN)) gunCategoryIndex = (gunCategoryIndex + 1) % numOptions;
-        if (IsKeyJustUp(VK_NUMPAD5) || PadPressed(BTN_A)) {
-            if (gunCategoryIndex == g_weaponCategories.size()) {
-                menuCategory = 0; // CAT_MAIN
-                menuIndex = 6;
+        if (inputDelayFrames == 0) { // Only process input if no global input delay
+            int up = 0, down = 0;
+            if (IsKeyJustUp(VK_NUMPAD8) || PadPressed(DPAD_UP))   up = 1;
+            if (IsKeyJustUp(VK_NUMPAD2) || PadPressed(DPAD_DOWN)) down = 1;
+
+            if (up) {
+                gunCategoryIndex = (gunCategoryIndex - 1 + numOptions) % numOptions;
+                inputDelayFrames = 10; // Apply delay after navigation
             }
-            else {
-                inWeaponSelection = true;
-                weaponIndex = 0;
+            if (down) {
+                gunCategoryIndex = (gunCategoryIndex + 1) % numOptions;
+                inputDelayFrames = 10; // Apply delay after navigation
             }
+
+            static bool prevA_category = false; // Separate static variable for category A button
+            bool currA_category = PadPressed(BTN_A);
+            if ((IsKeyJustUp(VK_NUMPAD5) || (currA_category && !prevA_category))) {
+                if (gunCategoryIndex == g_weaponCategories.size()) {
+                    menuCategory = 0; // CAT_MAIN
+                    menuIndex = 6; // Index for Gun Store in main menu
+                    inputDelayFrames = 10; // Apply delay after action
+                }
+                else {
+                    inWeaponSelection = true;
+                    weaponIndex = 0;
+                    inputDelayFrames = 10; // Apply delay after action
+                }
+            }
+            prevA_category = currA_category;
         }
     }
     else {
@@ -225,35 +252,63 @@ void draw_gun_store_menu() {
         DrawMenuOption("Back", MENU_X, optionY + MENU_H * selectedCategory.weapons.size(), MENU_W, MENU_H, selectedCategory.weapons.size() == weaponIndex);
 
         // Navigation and activation
-        if (IsKeyJustUp(VK_NUMPAD8) || PadPressed(DPAD_UP)) weaponIndex = (weaponIndex - 1 + numOptions) % numOptions;
-        if (IsKeyJustUp(VK_NUMPAD2) || PadPressed(DPAD_DOWN)) weaponIndex = (weaponIndex + 1) % numOptions;
-        if (IsKeyJustUp(VK_NUMPAD5) || PadPressed(BTN_A)) {
-            if (weaponIndex == selectedCategory.weapons.size()) {
-                inWeaponSelection = false;
+        if (inputDelayFrames == 0) { // Only process input if no global input delay
+            int up = 0, down = 0;
+            if (IsKeyJustUp(VK_NUMPAD8) || PadPressed(DPAD_UP))   up = 1;
+            if (IsKeyJustUp(VK_NUMPAD2) || PadPressed(DPAD_DOWN)) down = 1;
+
+            if (up) {
+                weaponIndex = (weaponIndex - 1 + numOptions) % numOptions;
+                inputDelayFrames = 10; // Apply delay after navigation
             }
-            else {
-                WeaponForSale& gun = selectedCategory.weapons[weaponIndex];
-                if (GunStore_HasWeapon(gun.hash)) {
-                    // Already owned, do nothing
-                }
-                else if (RpEvents_GetLevel() < gun.rankRequired) {
-                    UI::_SET_NOTIFICATION_TEXT_ENTRY("STRING");
-                    UI::_ADD_TEXT_COMPONENT_STRING("~r~Rank not high enough!");
-                    UI::_DRAW_NOTIFICATION(false, true);
-                }
-                else if (Money_Get() >= gun.price) {
-                    Money_Add(-gun.price);
-                    GunStore_AddWeapon(gun.hash);
-                    UI::_SET_NOTIFICATION_TEXT_ENTRY("STRING");
-                    UI::_ADD_TEXT_COMPONENT_STRING("~g~Purchase successful!");
-                    UI::_DRAW_NOTIFICATION(false, true);
+            if (down) {
+                weaponIndex = (weaponIndex + 1) % numOptions;
+                inputDelayFrames = 10; // Apply delay after navigation
+            }
+
+            static bool prevA_weapon = false; // Separate static variable for weapon A button
+            bool currA_weapon = PadPressed(BTN_A);
+            if ((IsKeyJustUp(VK_NUMPAD5) || (currA_weapon && !prevA_weapon))) {
+                if (weaponIndex == selectedCategory.weapons.size()) {
+                    inWeaponSelection = false;
+                    inputDelayFrames = 10; // Apply delay after action
                 }
                 else {
-                    UI::_SET_NOTIFICATION_TEXT_ENTRY("STRING");
-                    UI::_ADD_TEXT_COMPONENT_STRING("~r~Not enough money!");
-                    UI::_DRAW_NOTIFICATION(false, true);
+                    WeaponForSale& gun = selectedCategory.weapons[weaponIndex];
+                    if (GunStore_HasWeapon(gun.hash)) {
+                        // Already owned, do nothing
+                        UI::_SET_NOTIFICATION_TEXT_ENTRY("STRING");
+                        UI::_ADD_TEXT_COMPONENT_STRING("~y~Weapon already owned.");
+                        UI::_DRAW_NOTIFICATION(false, true);
+                        inputDelayFrames = 10; // Apply delay after action
+                    }
+                    else if (RpEvents_GetLevel() < gun.rankRequired) {
+                        UI::_SET_NOTIFICATION_TEXT_ENTRY("STRING");
+                        UI::_ADD_TEXT_COMPONENT_STRING("~r~Rank not high enough!");
+                        UI::_DRAW_NOTIFICATION(false, true);
+                        inputDelayFrames = 10; // Apply delay after action
+                    }
+                    else if (Money_Get() >= gun.price) {
+                        Money_Add(-gun.price);
+                        GunStore_AddWeapon(gun.hash);
+                        UI::_SET_NOTIFICATION_TEXT_ENTRY("STRING");
+                        UI::_ADD_TEXT_COMPONENT_STRING("~g~Purchase successful!");
+                        UI::_DRAW_NOTIFICATION(false, true);
+                        // Give weapon to player immediately after purchase
+                        WEAPON::GIVE_WEAPON_TO_PED(PLAYER::PLAYER_PED_ID(), gun.hash, 9999, false, true);
+                        inputDelayFrames = 10; // Apply delay after action
+                    }
+                    else {
+                        UI::_SET_NOTIFICATION_TEXT_ENTRY("STRING");
+                        UI::_ADD_TEXT_COMPONENT_STRING("~r~Not enough money!");
+                        UI::_DRAW_NOTIFICATION(false, true);
+                        inputDelayFrames = 10; // Apply delay after action
+                    }
                 }
             }
+            prevA_weapon = currA_weapon;
         }
     }
+    // Decrement input delay frames at the end of the tick
+    if (inputDelayFrames > 0) inputDelayFrames--;
 }

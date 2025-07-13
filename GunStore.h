@@ -26,3 +26,4 @@ void GunStore_Save();
 void GunStore_Load();
 bool GunStore_HasWeapon(Hash weaponHash);
 void GunStore_AddWeapon(Hash weaponHash);
+void GunStore_ClearAllBoughtWeapons(); // New function to clear all bought weapons
