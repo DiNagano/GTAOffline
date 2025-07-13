@@ -90,7 +90,7 @@ void LoadGameData();
 // The hash 0x388A47C51ABDAC8E is used to invoke the native.
 static BOOL IS_PLAYER_BEING_ARRESTED(Player player, BOOL atArresting) { return invoke<BOOL>(0x388A47C51ABDAC8E, player, atArresting); }
 static BOOL IS_PED_CUFFED(Ped ped) { return invoke<BOOL>(0x74E559B3BC910685, ped); }
-
+static void UNCUFF_PED(Ped ped) { invoke<Void>(0x67406F2C8F87FC4F, ped); } // Added UNCUFF_PED native
 
 // --- Drawing Helper Function Definitions ---
 // Restored DrawMenuHeader function
@@ -406,6 +406,17 @@ void ScriptMain() {
             // Detect if player just started being arrested and is not dead
             if (currBeingArrested && !PLAYER::IS_PLAYER_DEAD(player)) {
                 if (isCustomCharacterActive) {
+                    // If in a vehicle, warp out to ensure proper arrest animation/sequence
+                    if (PED::IS_PED_IN_ANY_VEHICLE(playerPed, FALSE)) {
+                        Vehicle veh = PED::GET_VEHICLE_PED_IS_IN(playerPed, FALSE);
+                        AI::TASK_LEAVE_VEHICLE(playerPed, veh, 16); // 16 = leave instantly
+                        int waitTime = 0;
+                        while (PED::IS_PED_IN_ANY_VEHICLE(playerPed, FALSE) && waitTime < 2000) {
+                            WAIT(50);
+                            waitTime += 50;
+                        }
+                    }
+
                     // Temporarily switch to generic model to allow game to handle arrest
                     isCustomCharacterActive = false;
                     PLAYER::SET_PLAYER_MODEL(player, GAMEPLAY::GET_HASH_KEY("player_g"));
@@ -429,6 +440,12 @@ void ScriptMain() {
             // Also ensure the player is actually playing (i.e., not in a loading screen or transition)
             if (!currBeingArrested && !currCuffed && CAM::IS_SCREEN_FADED_IN() && PLAYER::IS_PLAYER_PLAYING(player)) {
                 if (!isCustomCharacterActive) { // Only re-apply if it was temporarily disabled
+                    // Ensure the player is uncuffed before applying character if they somehow got cuffed
+                    if (IS_PED_CUFFED(playerPed)) {
+                        UNCUFF_PED(playerPed);
+                        WAIT(100); // Small delay after uncuffing
+                    }
+
                     // Handle bribe or confiscation
                     if (Money_Get() >= BRIBE_AMOUNT) {
                         Money_Add(-BRIBE_AMOUNT); // Deduct bribe
