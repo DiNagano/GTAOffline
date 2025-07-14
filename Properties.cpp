@@ -569,6 +569,181 @@ void Properties_Init() {
     lestersHouse.lastDailyBonusTime = 0;
     g_properties.push_back(lestersHouse);
 
+    // Split Sides Comedy Club (Business) West Vinewood - Eclipse Boulevard
+    Property splitSides;                                           // property name ID
+    splitSides.name = "Split Sides Comedy Club";                   // Ingame property name
+    splitSides.type = BUSINESS;                                    // Property type
+    splitSides.exteriorCoords.x = -430.4311f;                      // Buy marker X pos
+    splitSides.exteriorCoords.y = 288.9801f;                       // Buy marker Y pos
+    splitSides.exteriorCoords.z = 86.0618f;                        // Buy marker Z pos
+    splitSides.exteriorHeading = 0.0f;                             // Default heading
+    splitSides.interiorCoords = splitSides.exteriorCoords;         // Not used for teleport
+    splitSides.interiorHeading = 0.0f;                             // Default heading
+    splitSides.price = 750000;                                     // Custom price
+    splitSides.isBought = false;                                   // Property for sale - sold
+    splitSides.blipSprite = 108;                                   // Money Sign blip
+    splitSides.blipColorSale = 2;                                  // Green for sale
+    splitSides.blipColorOwned = 5;                                 // Blue for owned
+    splitSides.blipHandle = 0;                                     // Property Map Blip creation int
+    splitSides.interiorID = 0;                                     // Set this to the actual interior ID if you know it for props
+    splitSides.generatedMoney = 0;                                 // Money Generated
+    splitSides.moneyCap = BUSINESS_MONEY_CAP;                      // Default Money Cap 
+    splitSides.lastMoneyTickTime = GAMEPLAY::GET_GAME_TIMER();     // Initialize money timer
+    splitSides.collectCoords = splitSides.exteriorCoords;          // Collect at exterior marker
+    splitSides.lastCapNotifyTime = 0;                              // Initialize notification timer
+    splitSides.lastDailyBonusTime = GAMEPLAY::GET_GAME_TIMER();    // Initialize daily bonus timer
+    g_properties.push_back(splitSides);                            // get props count 
+
+    // Bahama Mamas Nightclub (Business) Del Perro - Marathon Avenue/Prosperity Street Promenade
+    Property bahamaMamas;                                          // property name ID
+    bahamaMamas.name = "Bahama Mamas Nightclub";                   // Ingame property name
+    bahamaMamas.type = BUSINESS;                                   // Property type
+    bahamaMamas.exteriorCoords.x = -1389.1651f;                    // Buy marker X pos
+    bahamaMamas.exteriorCoords.y = -585.6961f;                     // Buy marker Y pos
+    bahamaMamas.exteriorCoords.z = 30.2203f;                       // Buy marker Z pos
+    bahamaMamas.exteriorHeading = 0.0f;                            // Default heading
+    bahamaMamas.interiorCoords = bahamaMamas.exteriorCoords;       // Not used for teleport
+    bahamaMamas.interiorHeading = 0.0f;                            // Default heading
+    bahamaMamas.price = 1250000;                                   // Custom price
+    bahamaMamas.isBought = false;                                  // Property for sale - sold
+    bahamaMamas.blipSprite = 108;                                  // Money Sign blip
+    bahamaMamas.blipColorSale = 2;                                 // Green for sale
+    bahamaMamas.blipColorOwned = 5;                                // Blue for owned
+    bahamaMamas.blipHandle = 0;                                    // Property Map Blip creation int
+    bahamaMamas.interiorID = 0;                                    // Set this to the actual interior ID if you know it for props
+    bahamaMamas.generatedMoney = 0;                                // Money Generated
+    bahamaMamas.moneyCap = BUSINESS_MONEY_CAP;                     // Default Money Cap
+    bahamaMamas.lastMoneyTickTime = GAMEPLAY::GET_GAME_TIMER();    // Initialize money timer
+    bahamaMamas.collectCoords = bahamaMamas.exteriorCoords;        // Collect at exterior marker
+    bahamaMamas.lastCapNotifyTime = 0;                             // Initialize notification timer
+    bahamaMamas.lastDailyBonusTime = GAMEPLAY::GET_GAME_TIMER();   // Initialize daily bonus timer
+    g_properties.push_back(bahamaMamas);                           // get props count 
+
+    // Up-n-Atom Burger (Business) Downtown Vinewood - Vinewood Boulevard/Las Lagunas Boulevard
+    Property upnAtom;                                              // property name ID
+    upnAtom.name = "Up-n-Atom Burger";                             // Ingame property name
+    upnAtom.type = BUSINESS;                                       // Property type
+    upnAtom.exteriorCoords.x = 80.7293f;                           // Buy marker X pos
+    upnAtom.exteriorCoords.y = 273.4818f;                          // Buy marker Y pos
+    upnAtom.exteriorCoords.z = 110.2102f;                          // Buy marker Z pos
+    upnAtom.exteriorHeading = 0.0f;                                // Default heading
+    upnAtom.interiorCoords = upnAtom.exteriorCoords;               // Not used for teleport
+    upnAtom.interiorHeading = 0.0f;                                // Default heading
+    upnAtom.price = 900000;                                        // Custom price
+    upnAtom.isBought = false;                                      // Property for sale - sold
+    upnAtom.blipSprite = 108;                                      // Money Sign blip
+    upnAtom.blipColorSale = 2;                                     // Green for sale
+    upnAtom.blipColorOwned = 5;                                    // Blue for owned
+    upnAtom.blipHandle = 0;                                        // Property Map Blip creation int
+    upnAtom.interiorID = 0;                                        // Set this to the actual interior ID if you know it for props
+    upnAtom.generatedMoney = 0;                                    // Money Generated
+    upnAtom.moneyCap = BUSINESS_MONEY_CAP;                         // Default Money Cap
+    upnAtom.lastMoneyTickTime = GAMEPLAY::GET_GAME_TIMER();        // Initialize money timer
+    upnAtom.collectCoords = upnAtom.exteriorCoords;                // Collect at exterior marker
+    upnAtom.lastCapNotifyTime = 0;                                 // Initialize notification timer
+    upnAtom.lastDailyBonusTime = GAMEPLAY::GET_GAME_TIMER();       // Initialize daily bonus timer
+    g_properties.push_back(upnAtom);                               // get props count
+
+    // Oriental Theater (Business) Downtown Vinewood - Vinewood Boulevard
+    Property orientTheater;                                        // property name ID
+    orientTheater.name = "Oriental Theater";                       // Ingame property name
+    orientTheater.type = BUSINESS;                                 // Property type
+    orientTheater.exteriorCoords.x = 301.0014f;                    // Buy marker X pos
+    orientTheater.exteriorCoords.y = 201.7462f;                    // Buy marker Y pos
+    orientTheater.exteriorCoords.z = 104.3731f;                    // Buy marker Z pos
+    orientTheater.exteriorHeading = 0.0f;                          // Default heading
+    orientTheater.interiorCoords = orientTheater.exteriorCoords;   // Not used for teleport
+    orientTheater.interiorHeading = 0.0f;                          // Default heading
+    orientTheater.price = 8000000;                                 // Custom price
+    orientTheater.isBought = false;                                // Property for sale - sold
+    orientTheater.blipSprite = 108;                                // Money Sign blip
+    orientTheater.blipColorSale = 2;                               // Green for sale
+    orientTheater.blipColorOwned = 5;                              // Blue for owned
+    orientTheater.blipHandle = 0;                                  // Property Map Blip creation int
+    orientTheater.interiorID = 0;                                  // Set this to the actual interior ID if you know it for props
+    orientTheater.generatedMoney = 0;                              // Money Generated
+    orientTheater.moneyCap = BUSINESS_MONEY_CAP;                   // Default Money Cap
+    orientTheater.lastMoneyTickTime = GAMEPLAY::GET_GAME_TIMER();  // Initialize money timer
+    orientTheater.collectCoords = orientTheater.exteriorCoords;    // Collect at exterior marker
+    orientTheater.lastCapNotifyTime = 0;                           // Initialize notification timer
+    orientTheater.lastDailyBonusTime = GAMEPLAY::GET_GAME_TIMER(); // Initialize daily bonus timer
+    g_properties.push_back(orientTheater);                         // get props count
+
+    // Hornbills Strip Club (Business) West Vinewood - Eclipse Boulevard
+    Property hornBills;                                            // property name ID
+    hornBills.name = "Hornbills Strip Club";                       // Ingame property name
+    hornBills.type = BUSINESS;                                     // Property type
+    hornBills.exteriorCoords.x = -379.4113f;                       // Buy marker X pos
+    hornBills.exteriorCoords.y = 220.8403f;                        // Buy marker Y pos
+    hornBills.exteriorCoords.z = 83.9893f;                         // Buy marker Z pos
+    hornBills.exteriorHeading = 0.0f;                              // Default heading
+    hornBills.interiorCoords = hornBills.exteriorCoords;           // Not used for teleport
+    hornBills.interiorHeading = 0.0f;                              // Default heading
+    hornBills.price = 2000000;                                     // Custom price
+    hornBills.isBought = false;                                    // Property for sale - sold
+    hornBills.blipSprite = 108;                                    // Money Sign blip
+    hornBills.blipColorSale = 2;                                   // Green for sale
+    hornBills.blipColorOwned = 5;                                  // Blue for owned
+    hornBills.blipHandle = 0;                                      // Property Map Blip creation int
+    hornBills.interiorID = 0;                                      // Set this to the actual interior ID if you know it for props
+    hornBills.generatedMoney = 0;                                  // Money Generated
+    hornBills.moneyCap = BUSINESS_MONEY_CAP;                       // Default Money Cap
+    hornBills.lastMoneyTickTime = GAMEPLAY::GET_GAME_TIMER();      // Initialize money timer
+    hornBills.collectCoords = hornBills.exteriorCoords;            // Collect at exterior marker
+    hornBills.lastCapNotifyTime = 0;                               // Initialize notification timer
+    hornBills.lastDailyBonusTime = GAMEPLAY::GET_GAME_TIMER();     // Initialize daily bonus timer
+    g_properties.push_back(hornBills);                             // get props count
+
+    // You Tool Store (Business) Gran Senora Desert - Senora Freeway
+    Property youTool;                                              // property name ID
+    youTool.name = "You Tool Store";                               // Ingame property name
+    youTool.type = BUSINESS;                                       // Property type
+    youTool.exteriorCoords.x = 2748.6299f;                         // Buy marker X pos
+    youTool.exteriorCoords.y = 3472.5069f;                         // Buy marker Y pos
+    youTool.exteriorCoords.z = 55.6767f;                           // Buy marker Z pos
+    youTool.exteriorHeading = 0.0f;                                // Default heading
+    youTool.interiorCoords = youTool.exteriorCoords;               // Not used for teleport
+    youTool.interiorHeading = 0.0f;                                // Default heading
+    youTool.price = 1000000;                                       // Custom price
+    youTool.isBought = false;                                      // Property for sale - sold
+    youTool.blipSprite = 108;                                      // Money Sign blip
+    youTool.blipColorSale = 2;                                     // Green for sale
+    youTool.blipColorOwned = 5;                                    // Blue for owned
+    youTool.blipHandle = 0;                                        // Property Map Blip creation int
+    youTool.interiorID = 0;                                        // Set this to the actual interior ID if you know it for props
+    youTool.generatedMoney = 0;                                    // Money Generated
+    youTool.moneyCap = BUSINESS_MONEY_CAP;                         // Default Money Cap
+    youTool.lastMoneyTickTime = GAMEPLAY::GET_GAME_TIMER();        // Initialize money timer
+    youTool.collectCoords = davisMega.exteriorCoords;              // Collect at exterior marker
+    youTool.lastCapNotifyTime = 0;                                 // Initialize notification timer
+    youTool.lastDailyBonusTime = GAMEPLAY::GET_GAME_TIMER();       // Initialize daily bonus timer
+    g_properties.push_back(youTool);                               // get props count
+
+    // Davis Mega Mall (Business) Davis - Davis Avenue
+    Property davisMega;                                            // property name ID
+    davisMega.name = "Davis Mega Mall";                            // Ingame property name
+    davisMega.type = BUSINESS;                                     // Property type
+    davisMega.exteriorCoords.x = 28.9999f;                         // Buy marker X pos
+    davisMega.exteriorCoords.y = -1770.0999f;                      // Buy marker Y pos
+    davisMega.exteriorCoords.z = 29.6001f;                         // Buy marker Z pos
+    davisMega.exteriorHeading = 0.0f;                              // Default heading
+    davisMega.interiorCoords = davisMega.exteriorCoords;           // Not used for teleport
+    davisMega.interiorHeading = 0.0f;                              // Default heading
+    davisMega.price = 1000000;                                     // Custom price
+    davisMega.isBought = false;                                    // Property for sale - sold
+    davisMega.blipSprite = 108;                                    // Money Sign blip
+    davisMega.blipColorSale = 2;                                   // Green for sale
+    davisMega.blipColorOwned = 5;                                  // Blue for owned
+    davisMega.blipHandle = 0;                                      // Property Map Blip creation int
+    davisMega.interiorID = 0;                                      // Set this to the actual interior ID if you know it for props
+    davisMega.generatedMoney = 0;                                  // Money Generated
+    davisMega.moneyCap = BUSINESS_MONEY_CAP;                       // Default Money Cap
+    davisMega.lastMoneyTickTime = GAMEPLAY::GET_GAME_TIMER();      // Initialize money timer
+    davisMega.collectCoords = davisMega.exteriorCoords;            // Collect at exterior marker
+    davisMega.lastCapNotifyTime = 0;                               // Initialize notification timer
+    davisMega.lastDailyBonusTime = GAMEPLAY::GET_GAME_TIMER();     // Initialize daily bonus timer
+    g_properties.push_back(davisMega);                             // get props count
+
 
     // Initialize blips for all properties
     for (size_t i = 0; i < g_properties.size(); ++i) {
