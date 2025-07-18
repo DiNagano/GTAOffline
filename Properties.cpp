@@ -714,7 +714,7 @@ void Properties_Init() {
     youTool.generatedMoney = 0;                                    // Money Generated
     youTool.moneyCap = BUSINESS_MONEY_CAP;                         // Default Money Cap
     youTool.lastMoneyTickTime = GAMEPLAY::GET_GAME_TIMER();        // Initialize money timer
-    youTool.collectCoords = davisMega.exteriorCoords;              // Collect at exterior marker
+    youTool.collectCoords = youTool.exteriorCoords;                // Collect at exterior marker
     youTool.lastCapNotifyTime = 0;                                 // Initialize notification timer
     youTool.lastDailyBonusTime = GAMEPLAY::GET_GAME_TIMER();       // Initialize daily bonus timer
     g_properties.push_back(youTool);                               // get props count
@@ -789,7 +789,7 @@ void Properties_Init() {
     pearlSeaf.generatedMoney = 0;                                  // Money Generated
     pearlSeaf.moneyCap = BUSINESS_MONEY_CAP;                       // Default Money Cap
     pearlSeaf.lastMoneyTickTime = GAMEPLAY::GET_GAME_TIMER();      // Initialize money timer
-    pearlSeaf.collectCoords = animalArk.exteriorCoords;            // Collect at exterior marker
+    pearlSeaf.collectCoords = pearlSeaf.exteriorCoords;            // Collect at exterior marker
     pearlSeaf.lastCapNotifyTime = 0;                               // Initialize notification timer
     pearlSeaf.lastDailyBonusTime = GAMEPLAY::GET_GAME_TIMER();     // Initialize daily bonus timer
     g_properties.push_back(pearlSeaf);                             // get props count
@@ -814,7 +814,7 @@ void Properties_Init() {
     burgerShot.generatedMoney = 0;                                 // Money Generated
     burgerShot.moneyCap = BUSINESS_MONEY_CAP;                      // Default Money Cap
     burgerShot.lastMoneyTickTime = GAMEPLAY::GET_GAME_TIMER();     // Initialize money timer
-    burgerShot.collectCoords = animalArk.exteriorCoords;           // Collect at exterior marker
+    burgerShot.collectCoords = burgerShot.exteriorCoords;          // Collect at exterior marker
     burgerShot.lastCapNotifyTime = 0;                              // Initialize notification timer
     burgerShot.lastDailyBonusTime = GAMEPLAY::GET_GAME_TIMER();    // Initialize daily bonus timer
     g_properties.push_back(burgerShot);                            // get props count
