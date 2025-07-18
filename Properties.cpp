@@ -744,6 +744,80 @@ void Properties_Init() {
     davisMega.lastDailyBonusTime = GAMEPLAY::GET_GAME_TIMER();     // Initialize daily bonus timer
     g_properties.push_back(davisMega);                             // get props count
 
+    // Animal Ark (Business) Harmony - Route 68
+    Property animalArk;                                            // property name ID
+    animalArk.name = "Animal Ark";                                 // Ingame property name
+    animalArk.type = BUSINESS;                                     // Property type
+    animalArk.exteriorCoords.x = 561.9999f;                        // Buy marker X pos
+    animalArk.exteriorCoords.y = 2741.2999f;                       // Buy marker Y pos
+    animalArk.exteriorCoords.z = 42.8999f;                         // Buy marker Z pos
+    animalArk.exteriorHeading = 0.0f;                              // Default heading
+    animalArk.interiorCoords = animalArk.exteriorCoords;           // Not used for teleport
+    animalArk.interiorHeading = 0.0f;                              // Default heading
+    animalArk.price = 800000;                                      // Custom price
+    animalArk.isBought = false;                                    // Property for sale - sold
+    animalArk.blipSprite = 108;                                    // Money Sign blip
+    animalArk.blipColorSale = 2;                                   // Green for sale
+    animalArk.blipColorOwned = 5;                                  // Blue for owned
+    animalArk.blipHandle = 0;                                      // Property Map Blip creation int
+    animalArk.interiorID = 0;                                      // Set this to the actual interior ID if you know it for props
+    animalArk.generatedMoney = 0;                                  // Money Generated
+    animalArk.moneyCap = BUSINESS_MONEY_CAP;                       // Default Money Cap
+    animalArk.lastMoneyTickTime = GAMEPLAY::GET_GAME_TIMER();      // Initialize money timer
+    animalArk.collectCoords = animalArk.exteriorCoords;            // Collect at exterior marker
+    animalArk.lastCapNotifyTime = 0;                               // Initialize notification timer
+    animalArk.lastDailyBonusTime = GAMEPLAY::GET_GAME_TIMER();     // Initialize daily bonus timer
+    g_properties.push_back(animalArk);                             // get props count
+
+    // Pearls Seafood (Business) Del Perro - Del Perro Pier
+    Property pearlSeaf;                                            // property name ID
+    pearlSeaf.name = "Pearls Seafood";                             // Ingame property name
+    pearlSeaf.type = BUSINESS;                                     // Property type
+    pearlSeaf.exteriorCoords.x = -1816.1009f;                        // Buy marker X pos
+    pearlSeaf.exteriorCoords.y = -1192.2409f;                       // Buy marker Y pos
+    pearlSeaf.exteriorCoords.z = 14.3048f;                         // Buy marker Z pos
+    pearlSeaf.exteriorHeading = 0.0f;                              // Default heading
+    pearlSeaf.interiorCoords = pearlSeaf.exteriorCoords;           // Not used for teleport
+    pearlSeaf.interiorHeading = 0.0f;                              // Default heading
+    pearlSeaf.price = 900000;                                      // Custom price
+    pearlSeaf.isBought = false;                                    // Property for sale - sold
+    pearlSeaf.blipSprite = 108;                                    // Money Sign blip
+    pearlSeaf.blipColorSale = 2;                                   // Green for sale
+    pearlSeaf.blipColorOwned = 5;                                  // Blue for owned
+    pearlSeaf.blipHandle = 0;                                      // Property Map Blip creation int
+    pearlSeaf.interiorID = 0;                                      // Set this to the actual interior ID if you know it for props
+    pearlSeaf.generatedMoney = 0;                                  // Money Generated
+    pearlSeaf.moneyCap = BUSINESS_MONEY_CAP;                       // Default Money Cap
+    pearlSeaf.lastMoneyTickTime = GAMEPLAY::GET_GAME_TIMER();      // Initialize money timer
+    pearlSeaf.collectCoords = animalArk.exteriorCoords;            // Collect at exterior marker
+    pearlSeaf.lastCapNotifyTime = 0;                               // Initialize notification timer
+    pearlSeaf.lastDailyBonusTime = GAMEPLAY::GET_GAME_TIMER();     // Initialize daily bonus timer
+    g_properties.push_back(pearlSeaf);                             // get props count
+
+    // Burger Shot (Business) Vespucci Canals - Prosperity Street
+    Property burgerShot;                                           // property name ID
+    burgerShot.name = "Burger Shot";                               // Ingame property name
+    burgerShot.type = BUSINESS;                                    // Property type
+    burgerShot.exteriorCoords.x = -1182.3859f;                     // Buy marker X pos
+    burgerShot.exteriorCoords.y = -883.5986f;                      // Buy marker Y pos
+    burgerShot.exteriorCoords.z = 13.7759f;                        // Buy marker Z pos
+    burgerShot.exteriorHeading = 0.0f;                             // Default heading
+    burgerShot.interiorCoords = burgerShot.exteriorCoords;         // Not used for teleport
+    burgerShot.interiorHeading = 0.0f;                             // Default heading
+    burgerShot.price = 900000;                                     // Custom price
+    burgerShot.isBought = false;                                   // Property for sale - sold
+    burgerShot.blipSprite = 108;                                   // Money Sign blip
+    burgerShot.blipColorSale = 2;                                  // Green for sale
+    burgerShot.blipColorOwned = 5;                                 // Blue for owned
+    burgerShot.blipHandle = 0;                                     // Property Map Blip creation int
+    burgerShot.interiorID = 0;                                     // Set this to the actual interior ID if you know it for props
+    burgerShot.generatedMoney = 0;                                 // Money Generated
+    burgerShot.moneyCap = BUSINESS_MONEY_CAP;                      // Default Money Cap
+    burgerShot.lastMoneyTickTime = GAMEPLAY::GET_GAME_TIMER();     // Initialize money timer
+    burgerShot.collectCoords = animalArk.exteriorCoords;           // Collect at exterior marker
+    burgerShot.lastCapNotifyTime = 0;                              // Initialize notification timer
+    burgerShot.lastDailyBonusTime = GAMEPLAY::GET_GAME_TIMER();    // Initialize daily bonus timer
+    g_properties.push_back(burgerShot);                            // get props count
 
     // Initialize blips for all properties
     for (size_t i = 0; i < g_properties.size(); ++i) {
